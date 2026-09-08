@@ -1,8 +1,10 @@
 import json
 
-#types de msg
+#types de data
 MSG_INPUT = "input"#clientToHost
 MSG_STATE = "state"#hostToClient
+MSG_WORLD = "world"#world HtC
+
 
 
 def make_input_message(keys_pressed):
@@ -19,12 +21,20 @@ def make_input_message(keys_pressed):
 
 def make_state_message(players):
     """
-    L'hôte construit ce message pour dire à tout le monde où sont les joueurs.
-    players : dict du style {"host": {"x": 100, "y": 200}, "client": {"x": 150, "y": 220}}
+    Pos des joueurs envoyés
     """
     return {
         "type": MSG_STATE,
         "players": players
+    }
+
+def make_world_message(tilemap_dict):
+    """
+    One-time (monde)
+    """
+    return {
+        "type": MSG_WORLD,
+        "tilemap": tilemap_dict
     }
 
 
