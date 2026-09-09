@@ -16,6 +16,10 @@ TREE_CHANCE_MIN = 0.02
 TREE_CHANCE_MAX = 0.20
 ROCK_CHANCE = 0.025
 
+SPAWN_CLEAR_RADIUS = 3
+SPAWN_OFFSETS = [(0, 0), (2, 0), (0, 2), (2, 2)]
+
+
 
 def _generate_grid_points(width, height, cell_size, rng):
     cols = width // cell_size + 2
@@ -103,16 +107,39 @@ def generate_island(width, height, seed=None):
 
 
 def find_spawn_point(tilemap):
-    """Cherche une case walkable et dégagée (herbe, sans arbre/rocher) proche du centre de la carte."""
     center_x, center_y = tilemap.width // 2, tilemap.height // 2
 
+    spawn_x, spawn_y = center_x, center_y   #fallback
     for radius in range(0, max(tilemap.width, tilemap.height) // 2):
+        found = False
         for dx in range(-radius, radius + 1):
             for dy in range(-radius, radius + 1):
                 x, y = center_x + dx, center_y + dy
                 if not tilemap.in_bounds(x, y):
                     continue
                 if tilemap.get_ground(x, y) == GROUND_GRASS and tilemap.is_walkable(x, y):
-                    return x, y
+                    spawn_x, spawn_y = x, y
+                    found = True
+                    break
+            if found:
+                break
+        if found:
+            break
 
-    return center_x, center_y
+    clear_spawn_area(tilemap, spawn_x, spawn_y)
+    return spawn_x, spawn_y
+
+def clear_spawn_area(tilemap, center_x, center_y, radius=SPAWN_CLEAR_RADIUS):
+    for dy in range(-radius, radius + 1):
+        for dx in range(-radius, radius + 1):
+            x, y = center_x + dx, center_y + dy
+            if not tilemap.in_bounds(x, y):
+                continue
+            if tilemap.get_ground(x, y) == GROUND_WATER:
+                tilemap.set_ground(x, y, GROUND_GRASS)
+            tilemap.set_top(x, y, TOP_NONE)
+
+def spawn_position_for_slot(center_x, center_y, slot_index):
+    """slot_index : 0 à 3, correspond à un des 4 emplacements fixes garantis libres."""
+    dx, dy = SPAWN_OFFSETS[slot_index % len(SPAWN_OFFSETS)]
+    return center_x + dx, center_y + dy

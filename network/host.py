@@ -1,15 +1,23 @@
 import socket
 import selectors
 import config
-from network.protocol import decode, encode, make_state_message, make_world_message, MSG_INPUT
-from world.worldgen import generate_island, find_spawn_point
+from network.protocol import (
+    decode, encode,
+    make_state_message, make_world_message, make_welcome_message,
+    make_chat_broadcast, make_notice_message, make_full_message,
+    MSG_INPUT, MSG_JOIN, MSG_CHAT,
+)
+from world.worldgen import generate_island, find_spawn_point, spawn_position_for_slot
 from entities.player import new_player_state, update_player
+from network.discovery import Announcer
 
 HOST_PORT = 5555
+HOST_SESSION_ID = 0
+HOST_SLOT = 0
 
 
 class Host:
-    def __init__(self):
+    def __init__(self, pseudo="Hôte", seed=None, max_players=4, save_name="Sans nom"):
         self.sel = selectors.DefaultSelector()
 
         self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -18,21 +26,27 @@ class Host:
         self.server_sock.listen()
         self.sel.register(self.server_sock, selectors.EVENT_READ, data=None)
 
-        self.client_conn = None
-        self.recv_buffer = ""
+        self.tilemap = generate_island(config.WORLD_WIDTH, config.WORLD_HEIGHT, seed=seed)
+        self.spawn_tile_x, self.spawn_tile_y = find_spawn_point(self.tilemap)
 
-        #island gen
-        self.tilemap = generate_island(config.WORLD_WIDTH, config.WORLD_HEIGHT)
+        self.available_slots = [1, 2, 3][: max_players - 1]
 
-        spawn_x, spawn_y = find_spawn_point(self.tilemap)
-        spawn_px = spawn_x * config.TILE_SIZE
-        spawn_py = spawn_y * config.TILE_SIZE
+        self.clients = {}
+        self.next_session_id = 1
 
+        host_x, host_y = spawn_position_for_slot(self.spawn_tile_x, self.spawn_tile_y, HOST_SLOT)
         self.players = {
-            "host": new_player_state(spawn_px, spawn_py),
-            "client": new_player_state(spawn_px + config.TILE_SIZE, spawn_py),
+            HOST_SESSION_ID: new_player_state(host_x * config.TILE_SIZE, host_y * config.TILE_SIZE)
         }
-        self.client_keys = {"up": False, "down": False, "left": False, "right": False}
+        self.pseudos = {
+            HOST_SESSION_ID: pseudo
+        }
+
+        self.messages = []
+
+        self.max_players = max_players
+        self.save_name = save_name
+        self.announcer = Announcer()
 
     def poll_network(self):
         events = self.sel.select(timeout=0)
@@ -40,47 +54,125 @@ class Host:
             if key.data is None:
                 self._accept_connection()
             else:
-                self._read_client()
+                self._read_client(key.data)
 
     def _accept_connection(self):
         conn, addr = self.server_sock.accept()
+
+        if not self.available_slots:
+            print(f"[HOST] Connexion refusée depuis {addr} (partie pleine)")
+            try:
+                conn.send(encode(make_full_message("Partie pleine")))
+            except OSError:
+                pass
+            conn.close()
+            return
+
         conn.setblocking(False)
-        self.client_conn = conn
-        self.sel.register(conn, selectors.EVENT_READ, data="client")
-        print(f"[HOST] Client connecté depuis {addr}")
+        session_id = self.next_session_id
+        self.next_session_id += 1
+        slot = self.available_slots.pop(0)
 
-        #share world
-        world_message = encode(make_world_message(self.tilemap.to_dict()))
-        conn.send(world_message)
+        self.clients[session_id] = {
+            "conn": conn,
+            "recv_buffer": "",
+            "keys": {"up": False, "down": False, "left": False, "right": False},
+            "slot": slot,
+        }
+        self.pseudos[session_id] = f"Joueur {session_id}"
 
-    def _read_client(self):
+        spawn_x, spawn_y = spawn_position_for_slot(self.spawn_tile_x, self.spawn_tile_y, slot)
+        self.players[session_id] = new_player_state(spawn_x * config.TILE_SIZE, spawn_y * config.TILE_SIZE)
+
+        self.sel.register(conn, selectors.EVENT_READ, data=session_id)
+        print(f"[HOST] Client {session_id} connecté depuis {addr} (slot {slot})")
+
+        conn.send(encode(make_welcome_message(session_id)))
+        conn.send(encode(make_world_message(self.tilemap.to_dict())))
+
+    def _read_client(self, session_id):
+        client = self.clients[session_id]
         try:
-            data = self.client_conn.recv(65536)
+            data = client["conn"].recv(65536)
         except BlockingIOError:
+            return
+        except (ConnectionResetError, ConnectionAbortedError, OSError):
+            self._disconnect_client(session_id)
             return
 
         if not data:
-            print("[HOST] Client déconnecté")
-            self.sel.unregister(self.client_conn)
-            self.client_conn = None
+            self._disconnect_client(session_id)
             return
 
-        self.recv_buffer += data.decode("utf-8")
-        while "\n" in self.recv_buffer:
-            line, self.recv_buffer = self.recv_buffer.split("\n", 1)
+        client["recv_buffer"] += data.decode("utf-8")
+        while "\n" in client["recv_buffer"]:
+            line, client["recv_buffer"] = client["recv_buffer"].split("\n", 1)
             message = decode((line + "\n").encode("utf-8"))
+
             if message["type"] == MSG_INPUT:
-                self.client_keys = message["keys"]
+                client["keys"] = message["keys"]
+            elif message["type"] == MSG_JOIN:
+                pseudo = message["pseudo"]
+                self.pseudos[session_id] = pseudo
+                print(f"[HOST] Client {session_id} a choisi le pseudo '{pseudo}'")
+                self._broadcast_notice(f"{pseudo} a rejoint la partie.")
+            elif message["type"] == MSG_CHAT:
+                pseudo = self.pseudos.get(session_id, "???")
+                self._broadcast_chat(pseudo, message["text"])
+
+    def _disconnect_client(self, session_id):
+        pseudo = self.pseudos.get(session_id, "???")
+        print(f"[HOST] Client {session_id} déconnecté")
+        self.sel.unregister(self.clients[session_id]["conn"])
+        self.available_slots.append(self.clients[session_id]["slot"])
+        del self.clients[session_id]
+        del self.players[session_id]
+        del self.pseudos[session_id]
+        self._broadcast_notice(f"{pseudo} a quitté la partie.")
+
+    def _broadcast_chat(self, pseudo, text):
+        self.messages.append({"kind": "chat", "pseudo": pseudo, "text": text})
+        self._send_to_all(encode(make_chat_broadcast(pseudo, text)))
+
+    def _broadcast_notice(self, text):
+        self.messages.append({"kind": "notice", "text": text})
+        self._send_to_all(encode(make_notice_message(text)))
+
+    def _send_to_all(self, encoded_message):
+        dead_sessions = []
+        for session_id, client in self.clients.items():
+            try:
+                client["conn"].send(encoded_message)
+            except BlockingIOError:
+                pass
+            except (ConnectionResetError, ConnectionAbortedError, OSError):
+                dead_sessions.append(session_id)
+
+        for session_id in dead_sessions:
+            self._disconnect_client(session_id)
+
+    def send_chat(self, text):
+        """Appelé quand l'hôte tape lui-même un message dans le tchat."""
+        self._broadcast_chat(self.pseudos[HOST_SESSION_ID], text)
 
     def update(self, dt, host_keys):
-        update_player(self.players["host"], host_keys, dt, self.tilemap)
-        update_player(self.players["client"], self.client_keys, dt, self.tilemap)
+        update_player(self.players[HOST_SESSION_ID], host_keys, dt, self.tilemap)
+        for session_id, client in self.clients.items():
+            update_player(self.players[session_id], client["keys"], dt, self.tilemap)
 
     def broadcast_state(self):
-        if self.client_conn is None:
+        if not self.clients:
             return
-        message = encode(make_state_message(self.players))
-        try:
-            self.client_conn.send(message)
-        except BlockingIOError:
-            pass
+        self._send_to_all(encode(make_state_message(self.players, self.pseudos)))
+
+    def tick_announcer(self, dt):
+        info = {
+            "pseudo": self.pseudos[HOST_SESSION_ID],
+            "save_name": self.save_name,
+            "current_players": 1 + len(self.clients),
+            "max_players": self.max_players,
+        }
+        self.announcer.tick(dt, info)
+
+    def close(self):
+        self.announcer.close()
