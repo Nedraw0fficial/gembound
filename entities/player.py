@@ -1,10 +1,10 @@
-# entities/player.py — mouvement fluide : accélération, friction, collision fine par rectangles
-
 import math
 import config
 
-HITBOX_SIZE = 18 #12
-HITBOX_OFFSET = (config.TILE_SIZE - HITBOX_SIZE) / 2
+HITBOX_WIDTH = config.PLAYER_HITBOX_WIDTH
+HITBOX_HEIGHT = config.PLAYER_HITBOX_HEIGHT
+HITBOX_OFFSET_X = (config.TILE_SIZE - HITBOX_WIDTH) / 2
+HITBOX_OFFSET_Y = (config.TILE_SIZE - HITBOX_HEIGHT) / 2 - 4
 
 
 def new_player_state(x, y):
@@ -38,12 +38,12 @@ def _rects_overlap(a, b):
 def _can_move_to(x, y, room):
     """Vérifie si le rectangle de hitbox du joueur, placé en (x, y), chevauche
     un rectangle solide de n'importe quelle tuile qu'il touche."""
-    player_rect = (x + HITBOX_OFFSET, y + HITBOX_OFFSET, HITBOX_SIZE, HITBOX_SIZE)
+    player_rect = (x + HITBOX_OFFSET_X, y + HITBOX_OFFSET_Y, HITBOX_WIDTH, HITBOX_HEIGHT)
 
-    tile_x0 = int((x + HITBOX_OFFSET) // config.TILE_SIZE)
-    tile_x1 = int((x + HITBOX_OFFSET + HITBOX_SIZE) // config.TILE_SIZE)
-    tile_y0 = int((y + HITBOX_OFFSET) // config.TILE_SIZE)
-    tile_y1 = int((y + HITBOX_OFFSET + HITBOX_SIZE) // config.TILE_SIZE)
+    tile_x0 = int((x + HITBOX_OFFSET_X) // config.TILE_SIZE)
+    tile_x1 = int((x + HITBOX_OFFSET_X + HITBOX_WIDTH) // config.TILE_SIZE)
+    tile_y0 = int((y + HITBOX_OFFSET_Y) // config.TILE_SIZE)
+    tile_y1 = int((y + HITBOX_OFFSET_Y + HITBOX_HEIGHT) // config.TILE_SIZE)
 
     for ty in range(tile_y0, tile_y1 + 1):
         for tx in range(tile_x0, tile_x1 + 1):

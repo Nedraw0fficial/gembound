@@ -5,12 +5,8 @@ from world.dungeon_tiles import (
     TILE_WALL_SIDE_L, TILE_WALL_SIDE_R,
     TILE_WALL_FRONT_CORNER_L, TILE_WALL_FRONT_CORNER_R,
     TILE_WALL_SOLID, TILE_WALL_SOLID_M, TILE_WALL_SOLID_L, TILE_WALL_SOLID_R,
-    TILE_WALL_OVERLAY,
+    TILE_WALL_OVERLAY, TILE_WALL_OVERLAY_BOTTOM,
 )
-
-"""
-J'ai des séquelles de ce script fait à 3h
-"""
 
 
 def _is_ground(room, x, y):
@@ -79,19 +75,14 @@ def _pass_place_solid_below_side_walls(room):
 
 
 def _pass_fill_remaining_solid(room):
-    """
-    Pour chaque case encore vide, en partant du bas vers le haut :
-    - WALL_SOLID_M si gauche, droite ET dessous ne sont pas vides
-    - sinon WALL_SOLID_R si droite ET dessous ne sont pas vides
-    - sinon WALL_SOLID_L si gauche ET dessous ne sont pas vides
-    """
+    any_change = False
     for y in range(room.height - 1, -1, -1):
         row_before = [room.is_empty(x, y) for x in range(room.width)]
 
         def was_filled(x):
             if 0 <= x < room.width:
                 return not row_before[x]
-            return False  # hors des limites = pas rempli
+            return False
 
         decisions = []
         for x in range(room.width):
@@ -108,16 +99,25 @@ def _pass_fill_remaining_solid(room):
                 decisions.append((x, TILE_WALL_SOLID_R))
             elif left_filled and below_filled:
                 decisions.append((x, TILE_WALL_SOLID_L))
+            elif left_filled and right_filled:
+                decisions.append((x, TILE_WALL_SOLID))
 
         for x, tile_type in decisions:
             room.set(x, y, tile_type)
 
+        any_change = any_change or bool(decisions)
+
+    return any_change
+
 
 def _pass_solid_above_everything(room):
+    decisions = []
     for y in range(room.height):
         for x in range(room.width):
             if not room.is_empty(x, y) and room.is_empty(x, y - 1):
-                room.set(x, y - 1, TILE_WALL_SOLID)
+                decisions.append((x, y - 1))
+    for x, y in decisions:
+        room.set(x, y, TILE_WALL_SOLID)
 
 
 def _pass_overlay_on_ground_edges(room):
@@ -126,12 +126,17 @@ def _pass_overlay_on_ground_edges(room):
             if _is_ground(room, x, y) and not _is_ground(room, x, y + 1):
                 room.set_overlay(x, y, TILE_WALL_OVERLAY)
 
+def _pass_overlay_bottom_below_overlay(room):
+    positions = []
+    for y in range(room.height):
+        for x in range(room.width):
+            if room.overlay[y][x] == TILE_WALL_OVERLAY:
+                positions.append((x, y + 1))
+    for x, y in positions:
+        room.set_overlay(x, y, TILE_WALL_OVERLAY_BOTTOM)
+
 
 def autotile_room(ground_positions, width, height):
-    """
-    ground_positions >> liste de tuples (x, y) marquant les cases de ground
-    Return une DungeonRoom entièrement autotiled
-    """
     room = DungeonRoom(width, height)
     for x, y in ground_positions:
         room.set(x, y, TILE_GROUND)
@@ -142,8 +147,13 @@ def autotile_room(ground_positions, width, height):
     _pass_place_solid_below_ground(room)
     _pass_place_front_corners(room)
     _pass_place_solid_below_side_walls(room)
-    _pass_fill_remaining_solid(room)
+
+    for _ in range(5):
+        if not _pass_fill_remaining_solid(room):
+            break
+
     _pass_solid_above_everything(room)
     _pass_overlay_on_ground_edges(room)
+    _pass_overlay_bottom_below_overlay(room)
 
     return room

@@ -33,7 +33,7 @@ class Host:
 
         import random
         rng = random.Random(seed)
-        shape = generate_room_shape(rng, radius=ROOM_RADIUS, blob_count=5)
+        shape = generate_room_shape(rng, radius=ROOM_RADIUS)
         max_x = max(x for x, y in shape)
         max_y = max(y for x, y in shape)
         ground_positions = [(x + ROOM_MARGIN, y + ROOM_MARGIN) for x, y in shape]

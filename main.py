@@ -193,7 +193,8 @@ def main():
                 camera_x, camera_y = compute_camera(my_pos, room)
 
                 dungeon_renderer.render_main_layer(screen, room, camera_x, camera_y)
-
+                pending_labels = []
+                
                 sorted_players = sorted(network.players.items(), key=lambda item: item[1]["y"])
                 for session_id, pos in sorted_players:
                     if session_id not in player_animations:
@@ -217,8 +218,8 @@ def main():
                     tile_screen_x = pos["x"] * config.SCALE - camera_x * config.SCALE
                     tile_screen_y = pos["y"] * config.SCALE - camera_y * config.SCALE
 
-                    sprite_w = config.PLAYER_SPRITE_WIDTH * config.SCALE
-                    sprite_h = config.PLAYER_SPRITE_HEIGHT * config.SCALE
+                    sprite_w = int(config.PLAYER_SPRITE_WIDTH * config.SCALE * config.PLAYER_SIZE_MULTIPLIER)
+                    sprite_h = int(config.PLAYER_SPRITE_HEIGHT * config.SCALE * config.PLAYER_SIZE_MULTIPLIER)
                     foot_row_scaled = config.PLAYER_FOOT_ROW * config.SCALE
 
                     sprite_x = tile_screen_x + (config.DISPLAY_TILE_SIZE - sprite_w) // 2
@@ -230,9 +231,12 @@ def main():
                     pseudo = network.pseudos.get(session_id, "???")
                     label = label_font.render(pseudo, True, (255, 255, 255))
                     label_x = tile_screen_x + config.DISPLAY_TILE_SIZE // 2 - label.get_width() // 2
-                    screen.blit(label, (label_x, sprite_y - 8))
+                    pending_labels.append((label, label_x, sprite_y - 8))
 
                 dungeon_renderer.render_overlay_layer(screen, room, camera_x, camera_y)
+
+                for label, label_x, label_y in pending_labels:
+                    screen.blit(label, (label_x, label_y))
 
                 visible_messages = network.messages[-MAX_VISIBLE_MESSAGES:]
                 base_y = config.SCREEN_HEIGHT - 30 - len(visible_messages) * 22

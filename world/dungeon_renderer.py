@@ -6,7 +6,7 @@ from world.dungeon_tiles import (
     TILE_WALL_SIDE_L, TILE_WALL_SIDE_R,
     TILE_WALL_FRONT_CORNER_L, TILE_WALL_FRONT_CORNER_R,
     TILE_WALL_SOLID, TILE_WALL_SOLID_M, TILE_WALL_SOLID_L, TILE_WALL_SOLID_R,
-    TILE_WALL_OVERLAY,
+    TILE_WALL_OVERLAY, TILE_WALL_OVERLAY_BOTTOM,
 )
 
 SPRITE_FILES = {
@@ -24,6 +24,7 @@ SPRITE_FILES = {
     TILE_WALL_SOLID_L: "dungeon_wall_solid_l.png",
     TILE_WALL_SOLID_R: "dungeon_wall_solid_r.png",
     TILE_WALL_OVERLAY: "dungeon_wall_overlay.png",
+    TILE_WALL_OVERLAY_BOTTOM: "dungeon_wall_overlay_bottom.png",
 }
 
 
