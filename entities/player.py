@@ -1,7 +1,9 @@
+# entities/player.py — mouvement fluide : accélération, friction, collision fine par rectangles
+
 import math
 import config
 
-HITBOX_SIZE = 12
+HITBOX_SIZE = 18 #12
 HITBOX_OFFSET = (config.TILE_SIZE - HITBOX_SIZE) / 2
 
 
@@ -21,33 +23,37 @@ def _get_direction(keys):
         dx += 1.0
 
     length = math.hypot(dx, dy)
-    if length > 0: #normalise
+    if length > 0:
         dx /= length
         dy /= length
     return dx, dy
 
 
-def _hitbox_corners(x, y):
-    left = x + HITBOX_OFFSET
-    top = y + HITBOX_OFFSET
-    return [
-        (left, top),
-        (left + HITBOX_SIZE, top),
-        (left, top + HITBOX_SIZE),
-        (left + HITBOX_SIZE, top + HITBOX_SIZE),
-    ]
+def _rects_overlap(a, b):
+    ax, ay, aw, ah = a
+    bx, by, bw, bh = b
+    return ax < bx + bw and ax + aw > bx and ay < by + bh and ay + ah > by
 
 
-def _can_move_to(x, y, tilemap):
-    for px, py in _hitbox_corners(x, y):
-        tile_x = int(px) // config.TILE_SIZE
-        tile_y = int(py) // config.TILE_SIZE
-        if not tilemap.is_walkable(tile_x, tile_y):
-            return False
+def _can_move_to(x, y, room):
+    """Vérifie si le rectangle de hitbox du joueur, placé en (x, y), chevauche
+    un rectangle solide de n'importe quelle tuile qu'il touche."""
+    player_rect = (x + HITBOX_OFFSET, y + HITBOX_OFFSET, HITBOX_SIZE, HITBOX_SIZE)
+
+    tile_x0 = int((x + HITBOX_OFFSET) // config.TILE_SIZE)
+    tile_x1 = int((x + HITBOX_OFFSET + HITBOX_SIZE) // config.TILE_SIZE)
+    tile_y0 = int((y + HITBOX_OFFSET) // config.TILE_SIZE)
+    tile_y1 = int((y + HITBOX_OFFSET + HITBOX_SIZE) // config.TILE_SIZE)
+
+    for ty in range(tile_y0, tile_y1 + 1):
+        for tx in range(tile_x0, tile_x1 + 1):
+            for rect in room.world_hitboxes(tx, ty):
+                if _rects_overlap(player_rect, rect):
+                    return False
     return True
 
 
-def update_player(state, keys, dt, tilemap):
+def update_player(state, keys, dt, room):
     dir_x, dir_y = _get_direction(keys)
 
     if dir_x != 0 or dir_y != 0:
@@ -68,13 +74,13 @@ def update_player(state, keys, dt, tilemap):
         state["vy"] *= factor
 
     new_x = state["x"] + state["vx"] * dt
-    if _can_move_to(new_x, state["y"], tilemap):
+    if _can_move_to(new_x, state["y"], room):
         state["x"] = new_x
     else:
         state["vx"] = 0.0
 
     new_y = state["y"] + state["vy"] * dt
-    if _can_move_to(state["x"], new_y, tilemap):
+    if _can_move_to(state["x"], new_y, room):
         state["y"] = new_y
     else:
         state["vy"] = 0.0

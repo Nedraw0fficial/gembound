@@ -1,9 +1,9 @@
 import socket
 from network.protocol import (
     decode, encode, make_input_message, make_join_message, make_chat_request,
-    MSG_STATE, MSG_WORLD, MSG_WELCOME, MSG_CHAT, MSG_NOTICE, MSG_FULL
+    MSG_STATE, MSG_WORLD, MSG_WELCOME, MSG_CHAT, MSG_NOTICE, MSG_FULL,
 )
-from world.tilemap import Tilemap
+from world.dungeon_tiles import DungeonRoom
 
 HOST_PORT = 5555
 
@@ -17,7 +17,7 @@ class Client:
         self.recv_buffer = ""
         self.players = {}
         self.pseudos = {}
-        self.tilemap = None
+        self.room = None
         self.session_id = None
 
         self.pseudo = pseudo
@@ -73,8 +73,8 @@ class Client:
                 self.players = {int(k): v for k, v in message["players"].items()}
                 self.pseudos = {int(k): v for k, v in message["pseudos"].items()}
             elif message["type"] == MSG_WORLD:
-                self.tilemap = Tilemap.from_dict(message["tilemap"])
-                print("[CLIENT] Monde reçu")
+                self.room = DungeonRoom.from_dict(message["tilemap"])
+                print("[CLIENT] Donjon reçu")
             elif message["type"] == MSG_CHAT:
                 self.messages.append({"kind": "chat", "pseudo": message["pseudo"], "text": message["text"]})
             elif message["type"] == MSG_NOTICE:

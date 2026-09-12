@@ -3,7 +3,8 @@ import pygame
 import config
 from network.host import Host, HOST_SESSION_ID
 from network.client import Client
-from world.renderer import Renderer
+from world.dungeon_renderer import DungeonRenderer
+from entities.animation import AnimationController
 from ui.screens import MenuScreen, HostSetupScreen, JoinScreen, SCREEN_MENU, SCREEN_HOST_SETUP, SCREEN_JOIN, SCREEN_IN_GAME
 
 PLAYER_COLORS = [
@@ -40,6 +41,18 @@ def format_message(msg):
     return f"[{msg['pseudo']}] {msg['text']}", CHAT_COLOR
 
 
+def compute_camera(my_pos, room):
+    camera_x = int(my_pos["x"] - config.SCREEN_WIDTH // (2 * config.SCALE))
+    camera_y = int(my_pos["y"] - config.SCREEN_HEIGHT // (2 * config.SCALE))
+
+    max_camera_x = max(0, room.width * config.TILE_SIZE - config.SCREEN_WIDTH // config.SCALE)
+    max_camera_y = max(0, room.height * config.TILE_SIZE - config.SCREEN_HEIGHT // config.SCALE)
+
+    camera_x = max(0, min(camera_x, max_camera_x))
+    camera_y = max(0, min(camera_y, max_camera_y))
+    return camera_x, camera_y
+
+
 def main():
     pygame.init()
     screen = pygame.display.set_mode((config.SCREEN_WIDTH, config.SCREEN_HEIGHT))
@@ -50,7 +63,7 @@ def main():
     title_font = pygame.font.Font(config.FONT_PATH, config.FONT_SIZE_TITLE)
     label_font = pygame.font.Font(config.FONT_PATH, 18)
 
-    renderer = Renderer()
+    dungeon_renderer = DungeonRenderer()
 
     current_screen = SCREEN_MENU
     menu_screen = MenuScreen(font, title_font)
@@ -63,6 +76,8 @@ def main():
 
     chat_active = False
     chat_text = ""
+
+    player_animations = {}
 
     running = True
     while running:
@@ -162,39 +177,62 @@ def main():
                 network.poll_network()
 
             my_id = get_my_session_id(network, role)
-            tilemap = network.tilemap
+            room = network.room
 
             if role == "client" and getattr(network, "rejected_reason", None):
                 text = font.render(network.rejected_reason, True, (230, 80, 80))
                 hint = font.render("Échap pour revenir au menu", True, (200, 200, 200))
                 screen.blit(text, (config.SCREEN_WIDTH // 2 - text.get_width() // 2, config.SCREEN_HEIGHT // 2 - 20))
                 screen.blit(hint, (config.SCREEN_WIDTH // 2 - hint.get_width() // 2, config.SCREEN_HEIGHT // 2 + 20))
-            elif tilemap is None or my_id is None or my_id not in network.players:
+            elif room is None or my_id is None or my_id not in network.players:
                 text = font.render("Connexion en cours...", True, (255, 255, 255))
                 screen.blit(text, (config.SCREEN_WIDTH // 2 - text.get_width() // 2,
                                     config.SCREEN_HEIGHT // 2))
             else:
                 my_pos = network.players[my_id]
-                camera_x = int(my_pos["x"] - config.SCREEN_WIDTH // (2 * config.SCALE))
-                camera_y = int(my_pos["y"] - config.SCREEN_HEIGHT // (2 * config.SCALE))
-                camera_x = max(0, min(camera_x, config.WORLD_WIDTH * config.TILE_SIZE - config.SCREEN_WIDTH // config.SCALE))
-                camera_y = max(0, min(camera_y, config.WORLD_HEIGHT * config.TILE_SIZE - config.SCREEN_HEIGHT // config.SCALE))
+                camera_x, camera_y = compute_camera(my_pos, room)
 
-                renderer.render(screen, tilemap, camera_x, camera_y)
+                dungeon_renderer.render_main_layer(screen, room, camera_x, camera_y)
 
-                for session_id, pos in network.players.items():
+                sorted_players = sorted(network.players.items(), key=lambda item: item[1]["y"])
+                for session_id, pos in sorted_players:
+                    if session_id not in player_animations:
+                        player_animations[session_id] = AnimationController()
+                    anim = player_animations[session_id]
+
+                    speed = (pos["vx"] ** 2 + pos["vy"] ** 2) ** 0.5
+                    if speed > 5:
+                        anim.set_animation("walking")
+                        if pos["vx"] < -1:
+                            anim.set_facing(True)
+                        elif pos["vx"] > 1:
+                            anim.set_facing(False)
+                    else:
+                        anim.set_animation("idle")
+                    anim.update(dt)
+
                     color = PLAYER_COLORS[session_id % len(PLAYER_COLORS)]
-                    screen_x = pos["x"] * config.SCALE - camera_x * config.SCALE
-                    screen_y = pos["y"] * config.SCALE - camera_y * config.SCALE
-                    pygame.draw.rect(
-                        screen, color,
-                        (screen_x, screen_y, config.DISPLAY_TILE_SIZE, config.DISPLAY_TILE_SIZE)
-                    )
+                    frame = anim.get_current_frame(color)
+
+                    tile_screen_x = pos["x"] * config.SCALE - camera_x * config.SCALE
+                    tile_screen_y = pos["y"] * config.SCALE - camera_y * config.SCALE
+
+                    sprite_w = config.PLAYER_SPRITE_WIDTH * config.SCALE
+                    sprite_h = config.PLAYER_SPRITE_HEIGHT * config.SCALE
+                    foot_row_scaled = config.PLAYER_FOOT_ROW * config.SCALE
+
+                    sprite_x = tile_screen_x + (config.DISPLAY_TILE_SIZE - sprite_w) // 2
+                    sprite_y = tile_screen_y + config.DISPLAY_TILE_SIZE - foot_row_scaled
+
+                    scaled_frame = pygame.transform.scale(frame, (sprite_w, sprite_h))
+                    screen.blit(scaled_frame, (sprite_x, sprite_y))
 
                     pseudo = network.pseudos.get(session_id, "???")
                     label = label_font.render(pseudo, True, (255, 255, 255))
-                    label_x = screen_x + config.DISPLAY_TILE_SIZE // 2 - label.get_width() // 2
-                    screen.blit(label, (label_x, screen_y - 20))
+                    label_x = tile_screen_x + config.DISPLAY_TILE_SIZE // 2 - label.get_width() // 2
+                    screen.blit(label, (label_x, sprite_y - 8))
+
+                dungeon_renderer.render_overlay_layer(screen, room, camera_x, camera_y)
 
                 visible_messages = network.messages[-MAX_VISIBLE_MESSAGES:]
                 base_y = config.SCREEN_HEIGHT - 30 - len(visible_messages) * 22
@@ -213,6 +251,7 @@ def main():
 
     if network is not None and role == "host":
         network.close()
+
     pygame.quit()
     sys.exit()
 

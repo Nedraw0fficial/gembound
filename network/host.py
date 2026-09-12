@@ -7,13 +7,18 @@ from network.protocol import (
     make_chat_broadcast, make_notice_message, make_full_message,
     MSG_INPUT, MSG_JOIN, MSG_CHAT,
 )
-from world.worldgen import generate_island, find_spawn_point, spawn_position_for_slot
-from entities.player import new_player_state, update_player
 from network.discovery import Announcer
+from world.room_shape import generate_room_shape
+from world.dungeon_autotile import autotile_room
+from world.dungeon_tiles import get_spawn_positions
+from entities.player import new_player_state, update_player
 
 HOST_PORT = 5555
 HOST_SESSION_ID = 0
 HOST_SLOT = 0
+
+ROOM_RADIUS = 8
+ROOM_MARGIN = 4
 
 
 class Host:
@@ -26,21 +31,33 @@ class Host:
         self.server_sock.listen()
         self.sel.register(self.server_sock, selectors.EVENT_READ, data=None)
 
-        self.tilemap = generate_island(config.WORLD_WIDTH, config.WORLD_HEIGHT, seed=seed)
-        self.spawn_tile_x, self.spawn_tile_y = find_spawn_point(self.tilemap)
+        import random
+        rng = random.Random(seed)
+        shape = generate_room_shape(rng, radius=ROOM_RADIUS, blob_count=5)
+        max_x = max(x for x, y in shape)
+        max_y = max(y for x, y in shape)
+        ground_positions = [(x + ROOM_MARGIN, y + ROOM_MARGIN) for x, y in shape]
+        self.room = autotile_room(
+            ground_positions,
+            width=max_x + ROOM_MARGIN * 2 + 1,
+            height=max_y + ROOM_MARGIN * 2 + 1,
+        )
 
-        self.available_slots = [1, 2, 3][: max_players - 1]
+        spawn_tiles = get_spawn_positions(self.room, max_players)
+
+        self.available_slots = list(range(1, max_players))
 
         self.clients = {}
         self.next_session_id = 1
 
-        host_x, host_y = spawn_position_for_slot(self.spawn_tile_x, self.spawn_tile_y, HOST_SLOT)
+        host_x, host_y = spawn_tiles[HOST_SLOT]
         self.players = {
             HOST_SESSION_ID: new_player_state(host_x * config.TILE_SIZE, host_y * config.TILE_SIZE)
         }
         self.pseudos = {
             HOST_SESSION_ID: pseudo
         }
+        self._spawn_tiles = spawn_tiles
 
         self.messages = []
 
@@ -81,14 +98,14 @@ class Host:
         }
         self.pseudos[session_id] = f"Joueur {session_id}"
 
-        spawn_x, spawn_y = spawn_position_for_slot(self.spawn_tile_x, self.spawn_tile_y, slot)
+        spawn_x, spawn_y = self._spawn_tiles[slot]
         self.players[session_id] = new_player_state(spawn_x * config.TILE_SIZE, spawn_y * config.TILE_SIZE)
 
         self.sel.register(conn, selectors.EVENT_READ, data=session_id)
         print(f"[HOST] Client {session_id} connecté depuis {addr} (slot {slot})")
 
         conn.send(encode(make_welcome_message(session_id)))
-        conn.send(encode(make_world_message(self.tilemap.to_dict())))
+        conn.send(encode(make_world_message(self.room.to_dict())))
 
     def _read_client(self, session_id):
         client = self.clients[session_id]
@@ -152,13 +169,12 @@ class Host:
             self._disconnect_client(session_id)
 
     def send_chat(self, text):
-        """Appelé quand l'hôte tape lui-même un message dans le tchat."""
         self._broadcast_chat(self.pseudos[HOST_SESSION_ID], text)
 
     def update(self, dt, host_keys):
-        update_player(self.players[HOST_SESSION_ID], host_keys, dt, self.tilemap)
+        update_player(self.players[HOST_SESSION_ID], host_keys, dt, self.room)
         for session_id, client in self.clients.items():
-            update_player(self.players[session_id], client["keys"], dt, self.tilemap)
+            update_player(self.players[session_id], client["keys"], dt, self.room)
 
     def broadcast_state(self):
         if not self.clients:

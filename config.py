@@ -4,7 +4,7 @@ CONFIG
 
 #tiles
 TILE_SIZE = 16
-SCALE = 3#tim c bon pour la taille ou pas??
+SCALE = 4#tim c bon pour la taille ou pas??
 DISPLAY_TILE_SIZE = TILE_SIZE * SCALE
 
 #window
@@ -15,13 +15,21 @@ FPS = 60
 #player
 PLAYER_MAX_SPEED = 100
 PLAYER_ACCEL = 450
-PLAYER_FRICTION = 70000
+PLAYER_FRICTION = 450
+
+#sprite
+PLAYER_SPRITE_WIDTH = 25
+PLAYER_SPRITE_HEIGHT = 30
+PLAYER_FOOT_ROW = 25
+
+PLAYER_ANIMATION_FRAME_DURATION = {
+    #spf
+    "idle": 0.65,
+    "walking": 0.12,
+    "hurt": 0.08,
+}
 
 MAX_PLAYERS = 4
-
-#world
-WORLD_WIDTH = 200
-WORLD_HEIGHT = 200
 
 #settings
 FONT_PATH = "assets/fonts/GrapeSoda.ttf"

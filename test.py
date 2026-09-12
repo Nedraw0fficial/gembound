@@ -1,0 +1,7 @@
+import base64
+
+binary = b'111101011001101010111001010111101101111101010101010000111111000010101111111100000110101'
+encoded = base64.b64encode(binary)
+decoded = encoded.decode("utf-8")
+
+print(decoded)
