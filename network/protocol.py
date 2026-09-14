@@ -35,20 +35,22 @@ def make_input_message(keys_pressed):
     }
 
 
-def make_state_message(players, pseudos):
+def make_state_message(players, pseudos, story=None):
     return {
         "type": MSG_STATE,
         "players": players,
         "pseudos": pseudos,
+        "story": story or {},
     }
 
-def make_world_message(tilemap_dict):
+def make_world_message(tilemap_dict, story=None):
     """
     One-time (monde)
     """
     return {
         "type": MSG_WORLD,
-        "tilemap": tilemap_dict
+        "tilemap": tilemap_dict,
+        "story": story or {},
     }
 
 def make_join_message(pseudo):

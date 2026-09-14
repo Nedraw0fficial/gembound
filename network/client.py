@@ -23,6 +23,7 @@ class Client:
         self.pseudo = pseudo
         self._joined = False
         self.rejected_reason = None
+        self.story = {}
 
         self.messages = []
 
@@ -72,8 +73,10 @@ class Client:
             elif message["type"] == MSG_STATE:
                 self.players = {int(k): v for k, v in message["players"].items()}
                 self.pseudos = {int(k): v for k, v in message["pseudos"].items()}
+                self.story = message.get("story", self.story)
             elif message["type"] == MSG_WORLD:
                 self.room = DungeonRoom.from_dict(message["tilemap"])
+                self.story = message.get("story", {})
                 print("[CLIENT] Donjon reçu")
             elif message["type"] == MSG_CHAT:
                 self.messages.append({"kind": "chat", "pseudo": message["pseudo"], "text": message["text"]})

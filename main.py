@@ -32,6 +32,8 @@ def get_keys_pressed():
         "down": keys[pygame.K_DOWN] or keys[pygame.K_s],
         "left": keys[pygame.K_LEFT] or keys[pygame.K_q],
         "right": keys[pygame.K_RIGHT] or keys[pygame.K_d],
+        "interact": keys[pygame.K_e],
+        "choice": 1 if keys[pygame.K_1] else 2 if keys[pygame.K_2] else 3 if keys[pygame.K_3] else 0,
     }
 
 
@@ -41,12 +43,18 @@ def format_message(msg):
     return f"[{msg['pseudo']}] {msg['text']}", CHAT_COLOR
 
 
-def compute_camera(my_pos, room):
-    camera_x = int(my_pos["x"] - config.SCREEN_WIDTH // (2 * config.SCALE))
-    camera_y = int(my_pos["y"] - config.SCREEN_HEIGHT // (2 * config.SCALE))
+def compute_camera(my_pos, room, screen_size=None):
+    player_center_x = my_pos["x"] + config.TILE_SIZE / 2
+    player_center_y = my_pos["y"] + config.TILE_SIZE / 2
+    screen_width, screen_height = screen_size or (config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
+    viewport_width = screen_width / config.SCALE
+    viewport_height = screen_height / config.SCALE
 
-    max_camera_x = max(0, room.width * config.TILE_SIZE - config.SCREEN_WIDTH // config.SCALE)
-    max_camera_y = max(0, room.height * config.TILE_SIZE - config.SCREEN_HEIGHT // config.SCALE)
+    camera_x = int(player_center_x - viewport_width / 2)
+    camera_y = int(player_center_y - viewport_height / 2)
+
+    max_camera_x = max(0, room.width * config.TILE_SIZE - int(viewport_width))
+    max_camera_y = max(0, room.height * config.TILE_SIZE - int(viewport_height))
 
     camera_x = max(0, min(camera_x, max_camera_x))
     camera_y = max(0, min(camera_y, max_camera_y))
@@ -168,7 +176,10 @@ def main():
             join_screen.draw(screen)
 
         elif current_screen == SCREEN_IN_GAME:
-            my_keys = get_keys_pressed() if not chat_active else {"up": False, "down": False, "left": False, "right": False}
+            my_keys = get_keys_pressed() if not chat_active else {
+                "up": False, "down": False, "left": False, "right": False,
+                "interact": False, "choice": 0,
+            }
 
             if role == "host":
                 network.tick_announcer(dt)
@@ -193,7 +204,7 @@ def main():
                                     config.SCREEN_HEIGHT // 2))
             else:
                 my_pos = network.players[my_id]
-                camera_x, camera_y = compute_camera(my_pos, room)
+                camera_x, camera_y = compute_camera(my_pos, room, screen.get_size())
 
                 dungeon_renderer.render_main_layer(screen, room, camera_x, camera_y)
                 pending_labels = []
@@ -237,6 +248,43 @@ def main():
                     pending_labels.append((label, label_x, sprite_y - 8))
 
                 dungeon_renderer.render_overlay_layer(screen, room, camera_x, camera_y)
+                dungeon_renderer.render_story_layer(
+                    screen,
+                    room,
+                    camera_x,
+                    camera_y,
+                    network.story,
+                    dt,
+                    my_pos,
+                )
+
+                dialogue = network.story.get("dialogue")
+                if dialogue and dialogue.get("session_id") == my_id:
+                    panel = pygame.Rect(80, config.SCREEN_HEIGHT - 230, config.SCREEN_WIDTH - 160, 190)
+                    pygame.draw.rect(screen, (18, 20, 32), panel)
+                    pygame.draw.rect(screen, (220, 190, 90), panel, 3)
+                    speaker = font.render(dialogue["name"], True, (245, 210, 90))
+                    screen.blit(speaker, (panel.x + 20, panel.y + 14))
+                    line = font.render(dialogue["text"], True, (255, 255, 255))
+                    screen.blit(line, (panel.x + 20, panel.y + 50))
+                    for index, choice in enumerate(dialogue["choices"], start=1):
+                        choice_text = font.render(f"{index}. {choice}", True, (200, 220, 230))
+                        screen.blit(choice_text, (panel.x + 25, panel.y + 88 + index * 27))
+
+                if network.story.get("enabled"):
+                    if not network.story.get("key_collected"):
+                        objective = "Objectif : trouver la clé"
+                    elif network.story.get("dialogue") and network.story["dialogue"].get("session_id") == my_id:
+                        objective = "Choisissez une réponse : 1, 2 ou 3"
+                    elif not network.story.get("door_unlocked"):
+                        talked = len(network.story.get("talked_npcs", []))
+                        total = len(network.story.get("quest_goal", []))
+                        title = network.story.get("quest_title", "Histoire du donjon")
+                        objective = f"{title} : parler aux PNJ ({talked}/{total})"
+                    else:
+                        objective = "Objectif : atteindre la porte"
+                    objective_text = font.render(objective, True, (245, 210, 65))
+                    screen.blit(objective_text, (10, 10))
 
                 for label, label_x, label_y in pending_labels:
                     screen.blit(label, (label_x, label_y))

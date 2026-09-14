@@ -22,6 +22,8 @@ TILE_WALL_SOLID_R = "wall_solid_r"
 
 TILE_WALL_OVERLAY = "wall_overlay"
 TILE_WALL_OVERLAY_BOTTOM = "wall_overlay_bottom"
+TILE_KEY = "story_key"
+TILE_DOOR = "story_door"
 
 _FRONT_WALL_TYPES = {TILE_WALL_FRONT, TILE_WALL_FRONT_L, TILE_WALL_FRONT_R, TILE_WALL_FRONT_M}
 _FRONT_HITBOX = (0, 0, 16, 9)
@@ -29,7 +31,7 @@ _FULL_HITBOX = (0, 0, 16, 16)
 
 
 def _local_hitboxes(tile_type):
-    if tile_type == TILE_GROUND:
+    if tile_type in (TILE_GROUND, TILE_KEY):
         return []
     if tile_type in _FRONT_WALL_TYPES:
         return [_FRONT_HITBOX]
@@ -64,7 +66,7 @@ class DungeonRoom:
             self.overlay[y][x] = tile_type
 
     def is_walkable(self, x, y):
-        return self.get(x, y) == TILE_GROUND
+        return self.get(x, y) in (TILE_GROUND, TILE_KEY)
 
     def world_hitboxes(self, x, y):
         tile_type = self.get(x, y)

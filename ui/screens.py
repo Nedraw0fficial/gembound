@@ -52,7 +52,7 @@ class HostSetupScreen:
         self.minus_button = Button(center_x - 120, 300, 44, 40, "-", font)
         self.plus_button = Button(center_x + 76, 300, 44, 40, "+", font)
 
-        self.play_button = Button(center_x - 120, 380, 240, 44, "Jouer", font)
+        self.play_button = Button(center_x - 120, 350, 240, 44, "Jouer", font)
 
     def handle_event(self, event):
         self.seed_input.handle_event(event)
@@ -67,7 +67,11 @@ class HostSetupScreen:
             seed_text = self.seed_input.text.strip()
             seed = seed_text if seed_text else None
             save_name = self.save_name_input.text.strip() or "Sans nom"
-            return {"seed": seed, "max_players": self.max_players, "save_name": save_name}
+            return {
+                "seed": seed,
+                "max_players": self.max_players,
+                "save_name": save_name,
+            }
         return None
 
     def update(self, mouse_pos):
