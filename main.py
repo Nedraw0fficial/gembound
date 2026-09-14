@@ -57,7 +57,7 @@ def main():
     pygame.init()
     display_info = pygame.display.Info()
     config.configure_screen_size((display_info.current_w, display_info.current_h))
-    screen = pygame.display.set_mode((config.SCREEN_WIDTH, config.SCREEN_HEIGHT), pygame.FULLSCREEN)
+    screen = pygame.display.set_mode((config.SCREEN_WIDTH, config.SCREEN_HEIGHT - 60))
     config.SCREEN_WIDTH, config.SCREEN_HEIGHT = screen.get_size()
     pygame.display.set_caption(config.GAME_TITLE)
     clock = pygame.time.Clock()
@@ -124,7 +124,11 @@ def main():
                 ip = join_screen.handle_event(event)
                 if ip:
                     join_screen.close()
-                    network = Client(ip, pseudo=pending_pseudo)
+                    try:
+                        network = Client(ip, pseudo=pending_pseudo)
+                    except ConnectionError as e:
+                        print(f"[NETWORK] {e}")
+                        continue
                     role = "client"
                     current_screen = SCREEN_IN_GAME
 

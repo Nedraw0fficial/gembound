@@ -10,8 +10,19 @@ HOST_PORT = 5555
 
 class Client:
     def __init__(self, host_ip, pseudo="Joueur"):
+
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((host_ip, HOST_PORT))
+
+        try:
+            self.sock.settimeout(5)
+            self.sock.connect((host_ip, HOST_PORT))
+            self.sock.settimeout(None)
+        except (socket.timeout, ConnectionRefusedError, OSError) as e:
+            self.sock.close()
+            raise ConnectionError(
+                f"Impossible de rejoindre l'hôte {host_ip}:{HOST_PORT}"
+            ) from e
+
         self.sock.setblocking(False)
 
         self.recv_buffer = ""
