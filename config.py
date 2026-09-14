@@ -8,8 +8,8 @@ SCALE = 4#tim c bon pour la taille ou pas??
 DISPLAY_TILE_SIZE = TILE_SIZE * SCALE
 
 #window
-SCREEN_WIDTH = 1280
-SCREEN_HEIGHT = 720
+SCREEN_WIDTH = 1366#1280
+SCREEN_HEIGHT = 768#720
 FPS = 60
 
 #player

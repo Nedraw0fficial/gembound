@@ -46,6 +46,7 @@ class Listener:
         while True:
             try:
                 data, addr = self.sock.recvfrom(4096)
+                print(f"[DISCOVERY] Partie trouvée depuis {addr[0]}")
             except BlockingIOError:
                 break
             try:
