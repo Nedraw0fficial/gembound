@@ -55,7 +55,10 @@ def compute_camera(my_pos, room):
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode((config.SCREEN_WIDTH, config.SCREEN_HEIGHT))
+    display_info = pygame.display.Info()
+    config.configure_screen_size((display_info.current_w, display_info.current_h))
+    screen = pygame.display.set_mode((config.SCREEN_WIDTH, config.SCREEN_HEIGHT), pygame.FULLSCREEN)
+    config.SCREEN_WIDTH, config.SCREEN_HEIGHT = screen.get_size()
     pygame.display.set_caption(config.GAME_TITLE)
     clock = pygame.time.Clock()
 
