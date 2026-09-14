@@ -38,15 +38,20 @@ def _pass_resolve_front_variants(room):
 
 def _pass_place_side_walls(room):
     for y in range(room.height):
-        ground_columns = [x for x in range(room.width) if _is_ground(room, x, y)]
-        if not ground_columns:
-            continue
-        leftmost = min(ground_columns)
-        rightmost = max(ground_columns)
-        if room.is_empty(leftmost - 1, y):
-            room.set(leftmost - 1, y, TILE_WALL_SIDE_L)
-        if room.is_empty(rightmost + 1, y):
-            room.set(rightmost + 1, y, TILE_WALL_SIDE_R)
+        x = 0
+        while x < room.width:
+            if not _is_ground(room, x, y):
+                x += 1
+                continue
+            run_start = x
+            while x < room.width and _is_ground(room, x, y):
+                x += 1
+            run_end = x - 1
+
+            if room.is_empty(run_start - 1, y):
+                room.set(run_start - 1, y, TILE_WALL_SIDE_L)
+            if room.is_empty(run_end + 1, y):
+                room.set(run_end + 1, y, TILE_WALL_SIDE_R)
 
 
 def _pass_place_solid_below_ground(room):
@@ -148,7 +153,7 @@ def autotile_room(ground_positions, width, height):
     _pass_place_front_corners(room)
     _pass_place_solid_below_side_walls(room)
 
-    for _ in range(5):
+    for _ in range(40):
         if not _pass_fill_remaining_solid(room):
             break
 

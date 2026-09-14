@@ -8,18 +8,15 @@ SCALE = 4#tim c bon pour la taille ou pas??
 DISPLAY_TILE_SIZE = TILE_SIZE * SCALE
 
 #window
-SCREEN_WIDTH = 1366
-SCREEN_HEIGHT = 768
+SCREEN_WIDTH = 1280
+SCREEN_HEIGHT = 720
 FPS = 60
 
 
-def configure_screen_size(display_size):
-    """Use the display resolution for the game surface."""
+def apply_resolution(width, height):
     global SCREEN_WIDTH, SCREEN_HEIGHT
-
-    display_width, display_height = display_size
-    SCREEN_WIDTH = display_width
-    SCREEN_HEIGHT = display_height
+    SCREEN_WIDTH = width
+    SCREEN_HEIGHT = height
 
 #player
 PLAYER_MAX_SPEED = 100

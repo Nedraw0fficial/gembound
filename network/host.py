@@ -8,8 +8,7 @@ from network.protocol import (
     MSG_INPUT, MSG_JOIN, MSG_CHAT,
 )
 from network.discovery import Announcer
-from world.room_shape import generate_room_shape
-from world.dungeon_autotile import autotile_room
+from world.dungeon_floor import generate_dungeon_floor
 from world.dungeon_tiles import get_spawn_positions
 from entities.player import new_player_state, update_player
 
@@ -31,19 +30,19 @@ class Host:
         self.server_sock.listen()
         self.sel.register(self.server_sock, selectors.EVENT_READ, data=None)
 
-        import random
-        rng = random.Random(seed)
-        shape = generate_room_shape(rng, radius=ROOM_RADIUS)
-        max_x = max(x for x, y in shape)
-        max_y = max(y for x, y in shape)
-        ground_positions = [(x + ROOM_MARGIN, y + ROOM_MARGIN) for x, y in shape]
-        self.room = autotile_room(
-            ground_positions,
-            width=max_x + ROOM_MARGIN * 2 + 1,
-            height=max_y + ROOM_MARGIN * 2 + 1,
-        )
+        self.floor = generate_dungeon_floor(seed=seed, room_count=6)
+        self.room = self.floor.room
 
+        start_bounds = self.floor.layout.start_node.bounds
+        start_center_x = (start_bounds[0] + start_bounds[2]) // 2
+        start_center_y = (start_bounds[1] + start_bounds[3]) // 2
         spawn_tiles = get_spawn_positions(self.room, max_players)
+        #recentre la recherche de spawn sur la salle de spawn
+        from world.dungeon_tiles import find_walkable_near
+        spawn_tiles = [
+            find_walkable_near(self.room, start_center_x + dx, start_center_y + dy)
+            for dx, dy in [(0, 0), (2, 0), (0, 2), (2, 2)]
+        ]
 
         self.available_slots = list(range(1, max_players))
 

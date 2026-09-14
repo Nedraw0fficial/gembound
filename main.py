@@ -5,6 +5,8 @@ from network.host import Host, HOST_SESSION_ID
 from network.client import Client
 from world.dungeon_renderer import DungeonRenderer
 from entities.animation import AnimationController
+from settings import load_settings, save_settings
+from ui.screens import OptionsScreen, SCREEN_OPTIONS
 from ui.screens import MenuScreen, HostSetupScreen, JoinScreen, SCREEN_MENU, SCREEN_HOST_SETUP, SCREEN_JOIN, SCREEN_IN_GAME
 
 PLAYER_COLORS = [
@@ -25,13 +27,13 @@ def get_my_session_id(network, role):
     return network.session_id
 
 
-def get_keys_pressed():
+def get_keys_pressed(settings):
     keys = pygame.key.get_pressed()
     return {
-        "up": keys[pygame.K_UP] or keys[pygame.K_z],
-        "down": keys[pygame.K_DOWN] or keys[pygame.K_s],
-        "left": keys[pygame.K_LEFT] or keys[pygame.K_q],
-        "right": keys[pygame.K_RIGHT] or keys[pygame.K_d],
+        "up": any(keys[k] for k in settings.keybinds["up"]),
+        "down": any(keys[k] for k in settings.keybinds["down"]),
+        "left": any(keys[k] for k in settings.keybinds["left"]),
+        "right": any(keys[k] for k in settings.keybinds["right"]),
     }
 
 
@@ -52,13 +54,21 @@ def compute_camera(my_pos, room):
     camera_y = max(0, min(camera_y, max_camera_y))
     return camera_x, camera_y
 
+def _apply_display_mode(settings):
+    width, height = settings.resolution
+    flags = pygame.FULLSCREEN if settings.fullscreen else 0
+    screen = pygame.display.set_mode((width, height), flags)
+    config.apply_resolution(width, height)
+    return screen
+
+
 
 def main():
     pygame.init()
-    display_info = pygame.display.Info()
-    config.configure_screen_size((display_info.current_w, display_info.current_h))
-    screen = pygame.display.set_mode((config.SCREEN_WIDTH, config.SCREEN_HEIGHT - 60))
-    config.SCREEN_WIDTH, config.SCREEN_HEIGHT = screen.get_size()
+
+    settings = load_settings()
+    screen = _apply_display_mode(settings)
+
     pygame.display.set_caption(config.GAME_TITLE)
     clock = pygame.time.Clock()
 
@@ -82,6 +92,8 @@ def main():
 
     player_animations = {}
 
+    options_screen = None
+    
     running = True
     while running:
         dt = clock.tick(config.FPS) / 1000.0
@@ -104,9 +116,12 @@ def main():
                     if mode == "host":
                         host_setup_screen = HostSetupScreen(font)
                         current_screen = SCREEN_HOST_SETUP
-                    else:
+                    elif mode == "join":
                         join_screen = JoinScreen(font)
                         current_screen = SCREEN_JOIN
+                    elif mode == "options":
+                        options_screen = OptionsScreen(font, settings)
+                        current_screen = SCREEN_OPTIONS
 
             elif current_screen == SCREEN_HOST_SETUP:
                 result = host_setup_screen.handle_event(event)
@@ -131,6 +146,16 @@ def main():
                         continue
                     role = "client"
                     current_screen = SCREEN_IN_GAME
+
+            elif current_screen == SCREEN_OPTIONS:
+                result = options_screen.handle_event(event)
+                if result == "resolution_changed":
+                    screen = _apply_display_mode(settings)
+                    options_screen = OptionsScreen(font, settings)
+                elif result == "back":
+                        save_settings(settings)
+                        menu_screen = MenuScreen(font, title_font)
+                        current_screen = SCREEN_MENU
 
             elif current_screen == SCREEN_IN_GAME:
                 if getattr(network, "rejected_reason", None) and event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -171,8 +196,12 @@ def main():
             join_screen.update(mouse_pos)
             join_screen.draw(screen)
 
+        elif current_screen == SCREEN_OPTIONS:
+            options_screen.update(mouse_pos)
+            options_screen.draw(screen)
+
         elif current_screen == SCREEN_IN_GAME:
-            my_keys = get_keys_pressed() if not chat_active else {"up": False, "down": False, "left": False, "right": False}
+            my_keys = get_keys_pressed(settings) if not chat_active else {"up": False, "down": False, "left": False, "right": False}
 
             if role == "host":
                 network.tick_announcer(dt)

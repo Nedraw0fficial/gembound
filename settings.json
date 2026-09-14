@@ -1,0 +1,22 @@
+{
+  "resolution": [
+    1920,
+    1080
+  ],
+  "fullscreen": false,
+  "keybinds": {
+    "up": [
+      122
+    ],
+    "down": [
+      115
+    ],
+    "left": [
+      113
+    ],
+    "right": [
+      100
+    ]
+  },
+  "master_volume": 1.0
+}

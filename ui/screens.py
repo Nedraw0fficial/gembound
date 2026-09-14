@@ -7,6 +7,7 @@ SCREEN_MENU = "menu"
 SCREEN_HOST_SETUP = "host_setup"
 SCREEN_JOIN = "join"
 SCREEN_IN_GAME = "in_game"
+SCREEN_OPTIONS = "options"
 
 
 class MenuScreen:
@@ -18,6 +19,7 @@ class MenuScreen:
         self.pseudo_input = TextInput(center_x - 120, 220, 240, 36, font, placeholder="Pseudo (optionnel)")
         self.host_button = Button(center_x - 120, 280, 240, 44, "Héberger", font)
         self.join_button = Button(center_x - 120, 336, 240, 44, "Rejoindre", font)
+        self.options_button = Button(center_x - 120, 392, 240, 44, "Options", font)
 
     def handle_event(self, event):
         self.pseudo_input.handle_event(event)
@@ -25,11 +27,14 @@ class MenuScreen:
             return ("host", self.pseudo_input.text.strip() or "Joueur")
         if self.join_button.handle_event(event):
             return ("join", self.pseudo_input.text.strip() or "Joueur")
+        if self.options_button.handle_event(event):
+            return ("options", None)
         return None
 
     def update(self, mouse_pos):
         self.host_button.update_hover(mouse_pos)
         self.join_button.update_hover(mouse_pos)
+        self.options_button.update_hover(mouse_pos)
 
     def draw(self, screen):
         title = self.title_font.render(config.GAME_TITLE, True, (255, 255, 255))
@@ -38,6 +43,7 @@ class MenuScreen:
         self.pseudo_input.draw(screen)
         self.host_button.draw(screen)
         self.join_button.draw(screen)
+        self.options_button.draw(screen)
 
 
 class HostSetupScreen:
@@ -157,3 +163,104 @@ class JoinScreen:
 
     def close(self):
         self.listener.close()
+
+class OptionsScreen:
+    def __init__(self, font, settings):
+        self.font = font
+        self.settings = settings
+        center_x = config.SCREEN_WIDTH // 2
+
+        self.resolution_index = self._find_resolution_index()
+        self.res_minus_button = Button(center_x - 160, 200, 44, 40, "-", font)
+        self.res_plus_button = Button(center_x + 116, 200, 44, 40, "+", font)
+
+        self.fullscreen_button = Button(center_x - 120, 260, 240, 44,
+                                          self._fullscreen_label(), font)
+
+        self.remap_buttons = {}
+        y = 340
+        for action in ("up", "down", "left", "right"):
+            self.remap_buttons[action] = Button(center_x - 120, y, 240, 40,
+                                                  self._keybind_label(action), font)
+            y += 48
+
+        self.back_button = Button(center_x - 120, y + 20, 240, 44, "Retour", font)
+
+        self.listening_for = None
+
+    def _find_resolution_index(self):
+        from settings import DEFAULT_RESOLUTIONS
+        try:
+            return DEFAULT_RESOLUTIONS.index(self.settings.resolution)
+        except ValueError:
+            return 0
+
+    def _fullscreen_label(self):
+        return f"Plein écran : {'Oui' if self.settings.fullscreen else 'Non'}"
+
+    def _keybind_label(self, action):
+        from settings import DEFAULT_KEYBINDS
+        key_names = [pygame.key.name(k).upper() for k in self.settings.keybinds.get(action, [])]
+        label = " / ".join(key_names) if key_names else "..."
+        action_label = {"up": "Haut", "down": "Bas", "left": "Gauche", "right": "Droite"}[action]
+        return f"{action_label} : {label}"
+
+    def handle_event(self, event):
+        from settings import DEFAULT_RESOLUTIONS
+
+        if self.listening_for is not None:
+            if event.type == pygame.KEYDOWN:
+                self.settings.keybinds[self.listening_for] = [event.key]
+                self.remap_buttons[self.listening_for].text = self._keybind_label(self.listening_for)
+                self.listening_for = None
+            return None
+
+        if self.res_minus_button.handle_event(event):
+            self.resolution_index = max(0, self.resolution_index - 1)
+            self.settings.resolution = DEFAULT_RESOLUTIONS[self.resolution_index]
+            return "resolution_changed"
+
+        if self.res_plus_button.handle_event(event):
+            self.resolution_index = min(len(DEFAULT_RESOLUTIONS) - 1, self.resolution_index + 1)
+            self.settings.resolution = DEFAULT_RESOLUTIONS[self.resolution_index]
+            return "resolution_changed"
+
+        if self.fullscreen_button.handle_event(event):
+            self.settings.fullscreen = not self.settings.fullscreen
+            self.fullscreen_button.text = self._fullscreen_label()
+            return "resolution_changed"
+
+        for action, button in self.remap_buttons.items():
+            if button.handle_event(event):
+                self.listening_for = action
+                button.text = "Appuie sur une touche..."
+
+        if self.back_button.handle_event(event):
+            return "back"
+
+        return None
+
+    def update(self, mouse_pos):
+        self.res_minus_button.update_hover(mouse_pos)
+        self.res_plus_button.update_hover(mouse_pos)
+        self.fullscreen_button.update_hover(mouse_pos)
+        self.back_button.update_hover(mouse_pos)
+        for button in self.remap_buttons.values():
+            button.update_hover(mouse_pos)
+
+    def draw(self, screen):
+        from settings import DEFAULT_RESOLUTIONS
+
+        self.res_minus_button.draw(screen)
+        self.res_plus_button.draw(screen)
+
+        res_text = f"{self.settings.resolution[0]} x {self.settings.resolution[1]}"
+        res_label = self.font.render(res_text, True, (255, 255, 255))
+        screen.blit(res_label, (config.SCREEN_WIDTH // 2 - res_label.get_width() // 2, 210))
+
+        self.fullscreen_button.draw(screen)
+
+        for button in self.remap_buttons.values():
+            button.draw(screen)
+
+        self.back_button.draw(screen)

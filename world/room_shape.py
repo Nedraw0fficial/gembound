@@ -183,3 +183,6 @@ def _normalize(floor_set):
     min_x = min(x for x, y in floor_set)
     min_y = min(y for x, y in floor_set)
     return [(x - min_x, y - min_y) for x, y in floor_set]
+
+def generate_square_room(width, height):
+    return [(x, y) for x in range(width) for y in range(height)]
