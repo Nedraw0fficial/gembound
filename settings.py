@@ -5,9 +5,13 @@ import pygame
 SETTINGS_PATH = "settings.json"
 
 DEFAULT_RESOLUTIONS = [
+    (1024, 576),
+    (1152, 648),
     (1280, 720),
+    (1366, 768),
     (1600, 900),
     (1920, 1080),
+    (2560, 1440),
 ]
 
 DEFAULT_KEYBINDS = {

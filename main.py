@@ -55,8 +55,14 @@ def compute_camera(my_pos, room):
     return camera_x, camera_y
 
 def _apply_display_mode(settings):
-    width, height = settings.resolution
-    flags = pygame.FULLSCREEN if settings.fullscreen else 0
+    if settings.fullscreen:
+        info = pygame.display.Info()
+        width, height = info.current_w, info.current_h
+        flags = pygame.FULLSCREEN
+    else:
+        width, height = settings.resolution
+        flags = 0
+
     screen = pygame.display.set_mode((width, height), flags)
     config.apply_resolution(width, height)
     return screen

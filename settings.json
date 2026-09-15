@@ -1,9 +1,9 @@
 {
   "resolution": [
-    1920,
-    1080
+    2560,
+    1440
   ],
-  "fullscreen": false,
+  "fullscreen": true,
   "keybinds": {
     "up": [
       122
