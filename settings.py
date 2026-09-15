@@ -54,14 +54,26 @@ def _detect_native_resolution():
 
 
 def load_settings():
+    settings = Settings()
+
     if os.path.exists(SETTINGS_PATH):
         try:
             with open(SETTINGS_PATH, "r") as f:
                 data = json.load(f)
-            return Settings.from_dict(data)
+            settings = Settings.from_dict(data)
         except (json.JSONDecodeError, OSError):
             pass
-    return Settings()
+
+    _clamp_to_native_resolution(settings)
+    return settings
+
+
+def _clamp_to_native_resolution(settings):
+    native_w, native_h = _detect_native_resolution()
+    saved_w, saved_h = settings.resolution
+    if saved_w > native_w or saved_h > native_h:
+        settings.resolution = (native_w, native_h)
+        settings.fullscreen = False
 
 
 def save_settings(settings):
