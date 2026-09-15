@@ -7,7 +7,7 @@ from network.protocol import (
 )
 from world.dungeon_tiles import DungeonRoom
 
-DEFAULT_SERVER_HOST = "127.0.0.1"#TBA
+DEFAULT_SERVER_HOST = "89.168.61.135"#OracleServer
 DEFAULT_SERVER_PORT = 5560
 
 

@@ -1,0 +1,17 @@
+# Tim, voici les cmd bash pour le serveur oracle :
+
+sudo systemctl status gembound    # vérifier que ça tourne
+sudo journalctl -u gembound -f    # voir les logs en direct
+sudo systemctl restart gembound   # relancer après une mise à jour du code
+
+# et quand on update le projet :
+
+(connection ssh dans powershell, je te passerais la clef)
+cd gembound
+git pull
+sudo systemctl restart gembound
+
+et si update des requirements, juste apres le pull :
+
+source .venv/bin/activate
+pip install -r requirements.txt
