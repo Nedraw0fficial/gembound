@@ -28,10 +28,10 @@ class Lobby:
         return not self.password or attempt == self.password
 
     def summary(self):
-        """Format compact"""
         return {
             "id": self.id,
             "name": self.name,
+            "creator_pseudo": self.creator_pseudo,
             "current_players": self.current_player_count,
             "max_players": self.max_players,
             "has_password": self.has_password,

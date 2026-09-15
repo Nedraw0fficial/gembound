@@ -7,7 +7,9 @@ from world.dungeon_renderer import DungeonRenderer
 from entities.animation import AnimationController
 from settings import load_settings, save_settings
 from ui.screens import OptionsScreen, SCREEN_OPTIONS
-from ui.screens import MenuScreen, HostSetupScreen, JoinScreen, SCREEN_MENU, SCREEN_HOST_SETUP, SCREEN_JOIN, SCREEN_IN_GAME
+from ui.screens import MenuScreen, CreateLobbyScreen, JoinScreen, SCREEN_MENU, SCREEN_CREATE_LOBBY, SCREEN_JOIN, SCREEN_IN_GAME
+from network.online_client import OnlineClient
+
 
 PLAYER_COLORS = [
     (220, 80, 80),
@@ -86,7 +88,7 @@ def main():
 
     current_screen = SCREEN_MENU
     menu_screen = MenuScreen(font, title_font)
-    host_setup_screen = None
+    create_lobby_screen = None
     join_screen = None
 
     network = None
@@ -119,38 +121,54 @@ def main():
                 result = menu_screen.handle_event(event)
                 if result:
                     mode, pending_pseudo = result
-                    if mode == "host":
-                        host_setup_screen = HostSetupScreen(font)
-                        current_screen = SCREEN_HOST_SETUP
+                    if mode == "create":
+                        create_lobby_screen = CreateLobbyScreen(font)
+                        current_screen = SCREEN_CREATE_LOBBY
                     elif mode == "join":
-                        join_screen = JoinScreen(font)
+                        join_screen = JoinScreen(font, pending_pseudo)
                         current_screen = SCREEN_JOIN
                     elif mode == "options":
                         options_screen = OptionsScreen(font, settings)
                         current_screen = SCREEN_OPTIONS
 
-            elif current_screen == SCREEN_HOST_SETUP:
-                result = host_setup_screen.handle_event(event)
+            elif current_screen == SCREEN_CREATE_LOBBY:
+                result = create_lobby_screen.handle_event(event)
                 if result:
-                    network = Host(
-                        pseudo=pending_pseudo,
-                        seed=result["seed"],
-                        max_players=result["max_players"],
-                        save_name=result["save_name"],
-                    )
-                    role = "host"
+                    if result["is_lan"]:
+                        network = Host(
+                            pseudo=pending_pseudo,
+                            seed=result["seed"],
+                            max_players=result["max_players"],
+                            save_name=result["name"],
+                        )
+                        role = "host"
+                    else:
+                        network = OnlineClient(pending_pseudo)
+                        network.create_lobby(
+                            result["name"], result["seed"],
+                            result["max_players"], result["password"],
+                        )
+                        role = "online_client"
                     current_screen = SCREEN_IN_GAME
 
             elif current_screen == SCREEN_JOIN:
-                ip = join_screen.handle_event(event)
-                if ip:
-                    join_screen.close()
-                    try:
-                        network = Client(ip, pseudo=pending_pseudo)
-                    except ConnectionError as e:
-                        print(f"[NETWORK] {e}")
-                        continue
-                    role = "client"
+                result = join_screen.handle_event(event)
+                if result:
+                    if result[0] == "lan":
+                        _, ip = result
+                        join_screen.close()
+                        try:
+                            network = Client(ip, pseudo=pending_pseudo)
+                        except ConnectionError as e:
+                            print(f"[NETWORK] {e}")
+                            continue
+                        role = "client"
+                    else:
+                        _, lobby_id, password = result
+                        network = join_screen.directory_client
+                        network.join_lobby(lobby_id, password)
+                        join_screen.close_lan_listener()
+                        role = "online_client"
                     current_screen = SCREEN_IN_GAME
 
             elif current_screen == SCREEN_OPTIONS:
@@ -164,7 +182,8 @@ def main():
                         current_screen = SCREEN_MENU
 
             elif current_screen == SCREEN_IN_GAME:
-                if getattr(network, "rejected_reason", None) and event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                has_error = getattr(network, "rejected_reason", None) or getattr(network, "lobby_error", None)
+                if has_error and event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     network = None
                     role = None
                     current_screen = SCREEN_MENU
@@ -194,9 +213,9 @@ def main():
             menu_screen.update(mouse_pos)
             menu_screen.draw(screen)
 
-        elif current_screen == SCREEN_HOST_SETUP:
-            host_setup_screen.update(mouse_pos)
-            host_setup_screen.draw(screen)
+        elif current_screen == SCREEN_CREATE_LOBBY:
+            create_lobby_screen.update(mouse_pos)
+            create_lobby_screen.draw(screen)
 
         elif current_screen == SCREEN_JOIN:
             join_screen.update(mouse_pos)
@@ -221,7 +240,10 @@ def main():
             my_id = get_my_session_id(network, role)
             room = network.room
 
-            if role == "client" and getattr(network, "rejected_reason", None):
+            network_error = None
+            if role in ("client", "online_client"):
+                network_error = getattr(network, "rejected_reason", None) or getattr(network, "lobby_error", None)
+            if network_error:
                 text = font.render(network.rejected_reason, True, (230, 80, 80))
                 hint = font.render("Échap pour revenir au menu", True, (200, 200, 200))
                 screen.blit(text, (config.SCREEN_WIDTH // 2 - text.get_width() // 2, config.SCREEN_HEIGHT // 2 - 20))
