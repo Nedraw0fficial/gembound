@@ -3,7 +3,7 @@
     2560,
     1440
   ],
-  "fullscreen": true,
+  "fullscreen": false,
   "keybinds": {
     "up": [
       122

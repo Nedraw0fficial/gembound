@@ -32,6 +32,7 @@ class Host:
 
         self.floor = generate_dungeon_floor(seed=seed, room_count=6)
         self.room = self.floor.room
+        self.room_bounds = [node.bounds for node in self.floor.layout.all_nodes()]
 
         start_bounds = self.floor.layout.start_node.bounds
         start_center_x = (start_bounds[0] + start_bounds[2]) // 2

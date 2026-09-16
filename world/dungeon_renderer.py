@@ -44,8 +44,8 @@ class DungeonRenderer:
 
     def render_main_layer(self, screen, room, camera_x, camera_y):
         dts = config.DISPLAY_TILE_SIZE
-        first_col = max(0, camera_x // config.TILE_SIZE)
-        first_row = max(0, camera_y // config.TILE_SIZE)
+        first_col = max(0, int(camera_x) // config.TILE_SIZE)
+        first_row = max(0, int(camera_y) // config.TILE_SIZE)
         visible_cols = config.SCREEN_WIDTH // dts + 2
         visible_rows = config.SCREEN_HEIGHT // dts + 2
 
@@ -66,8 +66,8 @@ class DungeonRenderer:
 
     def render_overlay_layer(self, screen, room, camera_x, camera_y):
         dts = config.DISPLAY_TILE_SIZE
-        first_col = max(0, camera_x // config.TILE_SIZE)
-        first_row = max(0, camera_y // config.TILE_SIZE)
+        first_col = max(0, int(camera_x) // config.TILE_SIZE)
+        first_row = max(0, int(camera_y) // config.TILE_SIZE)
         visible_cols = config.SCREEN_WIDTH // dts + 2
         visible_rows = config.SCREEN_HEIGHT // dts + 2
 
