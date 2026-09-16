@@ -6,6 +6,7 @@ from network.protocol import (
     MSG_WELCOME, MSG_STATE, MSG_WORLD, MSG_CHAT, MSG_NOTICE, MSG_FULL,
 )
 from world.dungeon_tiles import DungeonRoom
+from entities.gate import gate_from_dict
 
 DEFAULT_SERVER_HOST = "89.168.61.135"#OracleServer
 DEFAULT_SERVER_PORT = 5560
@@ -29,6 +30,8 @@ class OnlineClient:
         self.players = {}
         self.pseudos = {}
         self.room = None
+        self.room_bounds = []
+        self.gates = []
         self.session_id = None
         self.messages = []
         self.rejected_reason = None
@@ -108,6 +111,7 @@ class OnlineClient:
         elif msg_type == MSG_WORLD:
             self.room = DungeonRoom.from_dict(message["tilemap"])
             self.room_bounds = message["room_bounds"]
+            self.gates = [gate_from_dict(g) for g in message["gates"]]
         elif msg_type == MSG_CHAT:
             self.messages.append({"kind": "chat", "pseudo": message["pseudo"], "text": message["text"]})
         elif msg_type == MSG_NOTICE:
