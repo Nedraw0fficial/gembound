@@ -68,7 +68,8 @@ class GameSession:
         }
 
         conn.send(encode(make_welcome_message(session_id)))
-        conn.send(encode(make_world_message(self.room.to_dict())))
+        room_bounds = [node.bounds for node in self.floor.layout.all_nodes()]
+        conn.send(encode(make_world_message(self.room.to_dict(), room_bounds)))
 
         self._broadcast_notice(f"{pseudo} a rejoint la partie.")
         return session_id

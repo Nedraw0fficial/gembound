@@ -85,6 +85,7 @@ class Client:
                 self.pseudos = {int(k): v for k, v in message["pseudos"].items()}
             elif message["type"] == MSG_WORLD:
                 self.room = DungeonRoom.from_dict(message["tilemap"])
+                self.room_bounds = message["room_bounds"]
                 print("[CLIENT] Donjon reçu")
             elif message["type"] == MSG_CHAT:
                 self.messages.append({"kind": "chat", "pseudo": message["pseudo"], "text": message["text"]})

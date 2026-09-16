@@ -45,15 +45,48 @@ def format_message(msg):
     return f"[{msg['pseudo']}] {msg['text']}", CHAT_COLOR
 
 
-def compute_camera(my_pos, room):
-    camera_x = int(my_pos["x"] - config.SCREEN_WIDTH // (2 * config.SCALE))
-    camera_y = int(my_pos["y"] - config.SCREEN_HEIGHT // (2 * config.SCALE))
+def _find_room_bounds_at(tile_x, tile_y, room_bounds):
+    for (min_x, min_y, max_x, max_y) in room_bounds:
+        if min_x <= tile_x <= max_x and min_y <= tile_y <= max_y:
+            return (min_x, min_y, max_x, max_y)
+    return None
 
-    max_camera_x = max(0, room.width * config.TILE_SIZE - config.SCREEN_WIDTH // config.SCALE)
-    max_camera_y = max(0, room.height * config.TILE_SIZE - config.SCREEN_HEIGHT // config.SCALE)
 
-    camera_x = max(0, min(camera_x, max_camera_x))
-    camera_y = max(0, min(camera_y, max_camera_y))
+def compute_camera(my_pos, room, room_bounds):
+    view_w = config.SCREEN_WIDTH // config.SCALE
+    view_h = config.SCREEN_HEIGHT // config.SCALE
+
+    camera_x = int(my_pos["x"] - view_w // 2)
+    camera_y = int(my_pos["y"] - view_h // 2)
+
+    tile_x = int(my_pos["x"]) // config.TILE_SIZE
+    tile_y = int(my_pos["y"]) // config.TILE_SIZE
+    current_room = _find_room_bounds_at(tile_x, tile_y, room_bounds)
+
+    if current_room is not None:
+        min_x, min_y, max_x, max_y = current_room
+        room_px_min_x = min_x * config.TILE_SIZE
+        room_px_min_y = min_y * config.TILE_SIZE
+        room_px_max_x = (max_x + 1) * config.TILE_SIZE
+        room_px_max_y = (max_y + 1) * config.TILE_SIZE
+        room_w = room_px_max_x - room_px_min_x
+        room_h = room_px_max_y - room_px_min_y
+
+        if room_w <= view_w:
+            camera_x = room_px_min_x - (view_w - room_w) // 2
+        else:
+            camera_x = max(room_px_min_x, min(camera_x, room_px_max_x - view_w))
+
+        if room_h <= view_h:
+            camera_y = room_px_min_y - (view_h - room_h) // 2
+        else:
+            camera_y = max(room_px_min_y, min(camera_y, room_px_max_y - view_h))
+    else:
+        max_camera_x = max(0, room.width * config.TILE_SIZE - view_w)
+        max_camera_y = max(0, room.height * config.TILE_SIZE - view_h)
+        camera_x = max(0, min(camera_x, max_camera_x))
+        camera_y = max(0, min(camera_y, max_camera_y))
+
     return camera_x, camera_y
 
 def _apply_display_mode(settings):
@@ -254,7 +287,7 @@ def main():
                                     config.SCREEN_HEIGHT // 2))
             else:
                 my_pos = network.players[my_id]
-                camera_x, camera_y = compute_camera(my_pos, room)
+                camera_x, camera_y = compute_camera(my_pos, room, network.room_bounds)
 
                 dungeon_renderer.render_main_layer(screen, room, camera_x, camera_y)
                 pending_labels = []

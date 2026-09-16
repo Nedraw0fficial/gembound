@@ -107,6 +107,7 @@ class OnlineClient:
             self.pseudos = {int(k): v for k, v in message["pseudos"].items()}
         elif msg_type == MSG_WORLD:
             self.room = DungeonRoom.from_dict(message["tilemap"])
+            self.room_bounds = message["room_bounds"]
         elif msg_type == MSG_CHAT:
             self.messages.append({"kind": "chat", "pseudo": message["pseudo"], "text": message["text"]})
         elif msg_type == MSG_NOTICE:

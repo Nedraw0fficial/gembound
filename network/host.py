@@ -104,7 +104,8 @@ class Host:
         print(f"[HOST] Client {session_id} connecté depuis {addr} (slot {slot})")
 
         conn.send(encode(make_welcome_message(session_id)))
-        conn.send(encode(make_world_message(self.room.to_dict())))
+        room_bounds = [node.bounds for node in self.floor.layout.all_nodes()]
+        conn.send(encode(make_world_message(self.room.to_dict(), room_bounds)))
 
     def _read_client(self, session_id):
         client = self.clients[session_id]
