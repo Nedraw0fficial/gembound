@@ -66,6 +66,14 @@ class Gate:
         return ("locked", self.orientation, self.frame_index)
 
 
+_OFFSET_BY_DIRECTION = {
+    "north": (0, -1),
+    "south": (0, 1),
+    "west": (-1, 0),
+    "east": (1, 0),
+}
+
+
 def generate_gates_for_floor(layout):
     gates = []
     for node in layout.all_nodes():
@@ -73,6 +81,9 @@ def generate_gates_for_floor(layout):
             continue
         for direction, (anchor_x, anchor_y, width) in node.doors.items():
             orientation = _ORIENTATION_BY_DIRECTION[direction]
+            offset_x, offset_y = _OFFSET_BY_DIRECTION[direction]
+            anchor_x += offset_x
+            anchor_y += offset_y
             half = width // 2
 
             if direction in ("north", "south"):
