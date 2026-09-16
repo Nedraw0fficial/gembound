@@ -131,7 +131,7 @@ def main():
 
     font = pygame.font.Font(config.FONT_PATH, config.FONT_SIZE_NORMAL)
     title_font = pygame.font.Font(config.FONT_PATH, config.FONT_SIZE_TITLE)
-    label_font = pygame.font.Font(config.FONT_PATH, 18)
+    label_font = pygame.font.Font(config.FONT_PATH, config.PLAYER_LABEL_FONT_SIZE)
 
     dungeon_renderer = DungeonRenderer()
 
@@ -373,17 +373,20 @@ def main():
 
                     pseudo = network.pseudos.get(session_id, "???")
                     label = label_font.render(pseudo, True, (255, 255, 255))
-                    label_x = tile_screen_x + config.DISPLAY_TILE_SIZE // 2 - label.get_width() // 2
-                    pending_labels.append((label, label_x, sprite_y - 8))
+
+                    tile_center_x = tile_screen_x + config.DISPLAY_TILE_SIZE / 2
+                    screen_label_x = tile_center_x * zoom - label.get_width() / 2
+                    screen_label_y = (sprite_y - 8) * zoom
+                    pending_labels.append((label, screen_label_x, screen_label_y))
 
                 dungeon_renderer.render_overlay_layer(capture, room, camera_x, camera_y)
-
-                for label, label_x, label_y in pending_labels:
-                    capture.blit(label, (label_x, label_y))
 
                 scaled_capture = pygame.transform.scale(capture, (config.SCREEN_WIDTH, config.SCREEN_HEIGHT))
                 screen.blit(scaled_capture, (0, 0))
 
+                for label, label_x, label_y in pending_labels:
+                    screen.blit(label, (label_x, label_y))
+                
                 visible_messages = network.messages[-MAX_VISIBLE_MESSAGES:]
                 base_y = config.SCREEN_HEIGHT - 30 - len(visible_messages) * 22
                 for i, msg in enumerate(visible_messages):
