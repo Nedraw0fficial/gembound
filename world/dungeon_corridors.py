@@ -1,5 +1,5 @@
 PLAZA_SIZE = 5
-
+GATE_SAFE_MARGIN = 3
 
 def generate_corridor_positions(rng, layout):
     corridor_cells = set()
@@ -21,6 +21,10 @@ def generate_corridor_positions(rng, layout):
     return corridor_cells
 
 
+def _too_close_to_door(cell, door_point, margin=GATE_SAFE_MARGIN):
+    return max(abs(cell[0] - door_point[0]), abs(cell[1] - door_point[1])) <= margin
+
+
 def _trace_l_corridor(start, end, width):
     sx, sy = start
     ex, ey = end
@@ -37,11 +41,14 @@ def _trace_l_corridor(start, end, width):
         for w in range(-half, width - half):
             cells.add((ex + w, y))
 
-    #carrefour élargi au point de coude
     if sx != ex and sy != ey:
         plaza_half = PLAZA_SIZE // 2
         for dx in range(-plaza_half, PLAZA_SIZE - plaza_half):
             for dy in range(-plaza_half, PLAZA_SIZE - plaza_half):
-                cells.add((ex + dx, sy + dy))
+                cell = (ex + dx, sy + dy)
+                # jamais de carrefour élargi trop près d'une porte de salle (gates)
+                if _too_close_to_door(cell, start) or _too_close_to_door(cell, end):
+                    continue
+                cells.add(cell)
 
     return cells
