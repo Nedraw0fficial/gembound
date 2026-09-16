@@ -16,3 +16,13 @@ et si update des requirements, juste apres le pull :
 
 source .venv/bin/activate
 pip install -r requirements.txt
+
+# setup
+
+git clone https://github.com/Nedraw0fficial/gembound.git
+cd gembound
+python -m venv .venv
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python main.py

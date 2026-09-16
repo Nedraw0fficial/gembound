@@ -6,6 +6,7 @@ from network.host import Host, HOST_SESSION_ID
 from network.client import Client
 from network.online_client import OnlineClient
 from world.dungeon_renderer import DungeonRenderer
+from world.gate_renderer import GateRenderer
 from entities.animation import AnimationController
 from settings import load_settings, save_settings
 from ui.screens import (
@@ -134,6 +135,7 @@ def main():
     label_font = pygame.font.Font(config.FONT_PATH, config.PLAYER_LABEL_FONT_SIZE)
 
     dungeon_renderer = DungeonRenderer()
+    gate_renderer = GateRenderer()
 
     current_screen = SCREEN_MENU
     menu_screen = MenuScreen(font, title_font)
@@ -258,7 +260,8 @@ def main():
                         elif event.key == pygame.K_BACKSPACE:
                             chat_text = chat_text[:-1]
                 elif event.type == pygame.TEXTINPUT and chat_active:
-                    chat_text += event.text
+                    if len(chat_text) < config.MAX_CHAT_LENGTH:
+                        chat_text += event.text
 
         screen.fill((20, 20, 30))
 
@@ -336,7 +339,8 @@ def main():
                 camera_y = camera_state["y"] + sway_y
 
                 dungeon_renderer.render_main_layer(capture, room, camera_x, camera_y)
-
+                gate_renderer.render(capture, network.gates, camera_x, camera_y)
+                
                 pending_labels = []
                 sorted_players = sorted(network.players.items(), key=lambda item: item[1]["y"])
                 for session_id, pos in sorted_players:

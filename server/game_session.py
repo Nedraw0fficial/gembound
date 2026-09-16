@@ -7,6 +7,7 @@ from network.protocol import (
 from world.dungeon_floor import generate_dungeon_floor
 from world.dungeon_tiles import find_walkable_near
 from entities.player import new_player_state, update_player
+from entities.gate import generate_gates_for_floor, gate_to_dict
 import config
 
 TILE_SIZE = config.TILE_SIZE
@@ -23,6 +24,7 @@ class GameSession:
         self.max_players = max_players
         self.floor = generate_dungeon_floor(seed=seed, room_count=6)
         self.room = self.floor.room
+        self.gates = generate_gates_for_floor(self.floor.layout)
 
         start_bounds = self.floor.layout.start_node.bounds
         center_x = (start_bounds[0] + start_bounds[2]) // 2
@@ -69,7 +71,8 @@ class GameSession:
 
         conn.send(encode(make_welcome_message(session_id)))
         room_bounds = [node.bounds for node in self.floor.layout.all_nodes()]
-        conn.send(encode(make_world_message(self.room.to_dict(), room_bounds)))
+        gates_data = [gate_to_dict(g) for g in self.gates]
+        conn.send(encode(make_world_message(self.room.to_dict(), room_bounds, gates_data)))
 
         self._broadcast_notice(f"{pseudo} a rejoint la partie.")
         return session_id
@@ -78,7 +81,6 @@ class GameSession:
         """
         Lit les données disponibles sur le socket de ce joueur
         Retourne False si la connexion doit être fermée
-        message anormalement gros = client suspect
         """
         client = self.clients[session_id]
         try:
@@ -110,7 +112,8 @@ class GameSession:
             self.clients[session_id]["keys"] = message["keys"]
         elif message["type"] == MSG_CHAT:
             pseudo = self.pseudos.get(session_id, "???")
-            self._broadcast_chat(pseudo, message["text"])
+            text = message["text"][:config.MAX_CHAT_LENGTH]
+            self._broadcast_chat(pseudo, text)
 
     def disconnect_player(self, session_id):
         pseudo = self.pseudos.get(session_id, "???")
@@ -142,8 +145,10 @@ class GameSession:
             self.disconnect_player(session_id)
 
     def update(self, dt):
+        for gate in self.gates:
+            gate.update(dt)
         for session_id, client in list(self.clients.items()):
-            update_player(self.players[session_id], client["keys"], dt, self.room)
+            update_player(self.players[session_id], client["keys"], dt, self.room, self.gates)
 
     def broadcast_state(self):
         if not self.clients:

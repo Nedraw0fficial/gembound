@@ -82,7 +82,7 @@ def make_state_message(players, pseudos):
         "pseudos": pseudos,
     }
 
-def make_world_message(tilemap_dict, room_bounds):
+def make_world_message(tilemap_dict, room_bounds, gates_data):
     """
     One-time (monde)
     """
@@ -90,6 +90,7 @@ def make_world_message(tilemap_dict, room_bounds):
         "type": MSG_WORLD,
         "tilemap": tilemap_dict,
         "room_bounds": room_bounds,
+        "gates": gates_data,
     }
 
 def make_join_message(pseudo):

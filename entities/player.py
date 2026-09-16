@@ -35,9 +35,7 @@ def _rects_overlap(a, b):
     return ax < bx + bw and ax + aw > bx and ay < by + bh and ay + ah > by
 
 
-def _can_move_to(x, y, room):
-    """Vérifie si le rectangle de hitbox du joueur, placé en (x, y), chevauche
-    un rectangle solide de n'importe quelle tuile qu'il touche."""
+def _can_move_to(x, y, room, gates):
     player_rect = (x + HITBOX_OFFSET_X, y + HITBOX_OFFSET_Y, HITBOX_WIDTH, HITBOX_HEIGHT)
 
     tile_x0 = int((x + HITBOX_OFFSET_X) // config.TILE_SIZE)
@@ -50,10 +48,16 @@ def _can_move_to(x, y, room):
             for rect in room.world_hitboxes(tx, ty):
                 if _rects_overlap(player_rect, rect):
                     return False
+
+    for gate in gates:
+        for rect in gate.world_hitboxes():
+            if _rects_overlap(player_rect, rect):
+                return False
+
     return True
 
 
-def update_player(state, keys, dt, room):
+def update_player(state, keys, dt, room, gates=()):
     dir_x, dir_y = _get_direction(keys)
 
     if dir_x != 0 or dir_y != 0:
@@ -74,13 +78,13 @@ def update_player(state, keys, dt, room):
         state["vy"] *= factor
 
     new_x = state["x"] + state["vx"] * dt
-    if _can_move_to(new_x, state["y"], room):
+    if _can_move_to(new_x, state["y"], room, gates):
         state["x"] = new_x
     else:
         state["vx"] = 0.0
 
     new_y = state["y"] + state["vy"] * dt
-    if _can_move_to(state["x"], new_y, room):
+    if _can_move_to(state["x"], new_y, room, gates):
         state["y"] = new_y
     else:
         state["vy"] = 0.0

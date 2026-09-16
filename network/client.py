@@ -4,6 +4,7 @@ from network.protocol import (
     MSG_STATE, MSG_WORLD, MSG_WELCOME, MSG_CHAT, MSG_NOTICE, MSG_FULL,
 )
 from world.dungeon_tiles import DungeonRoom
+from entities.gate import gate_from_dict
 
 HOST_PORT = 5555
 
@@ -86,6 +87,7 @@ class Client:
             elif message["type"] == MSG_WORLD:
                 self.room = DungeonRoom.from_dict(message["tilemap"])
                 self.room_bounds = message["room_bounds"]
+                self.gates = [gate_from_dict(g) for g in message["gates"]]
                 print("[CLIENT] Donjon reçu")
             elif message["type"] == MSG_CHAT:
                 self.messages.append({"kind": "chat", "pseudo": message["pseudo"], "text": message["text"]})

@@ -11,6 +11,7 @@ from network.discovery import Announcer
 from world.dungeon_floor import generate_dungeon_floor
 from world.dungeon_tiles import get_spawn_positions
 from entities.player import new_player_state, update_player
+from entities.gate import generate_gates_for_floor, gate_to_dict
 
 HOST_PORT = 5555
 HOST_SESSION_ID = 0
@@ -106,7 +107,9 @@ class Host:
 
         conn.send(encode(make_welcome_message(session_id)))
         room_bounds = [node.bounds for node in self.floor.layout.all_nodes()]
-        conn.send(encode(make_world_message(self.room.to_dict(), room_bounds)))
+        gates_data = [gate_to_dict(g) for g in self.gates]
+        conn.send(encode(make_world_message(self.room.to_dict(), room_bounds, gates_data)))
+        self.gates = generate_gates_for_floor(self.floor.layout)
 
     def _read_client(self, session_id):
         client = self.clients[session_id]
@@ -173,9 +176,12 @@ class Host:
         self._broadcast_chat(self.pseudos[HOST_SESSION_ID], text)
 
     def update(self, dt, host_keys):
-        update_player(self.players[HOST_SESSION_ID], host_keys, dt, self.room)
+        for gate in self.gates:
+            gate.update(dt)
+        update_player(self.players[HOST_SESSION_ID], host_keys, dt, self.room, self.gates)
         for session_id, client in self.clients.items():
-            update_player(self.players[session_id], client["keys"], dt, self.room)
+            update_player(self.players[session_id], client["keys"], dt, self.room, self.gates)
+
 
     def broadcast_state(self):
         if not self.clients:
