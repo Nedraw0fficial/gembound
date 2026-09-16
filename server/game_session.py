@@ -11,6 +11,8 @@ import config
 
 TILE_SIZE = config.TILE_SIZE
 
+MAX_BUFFER_SIZE = 65536 #~64Ko
+
 
 class GameSession:
     """
@@ -73,8 +75,9 @@ class GameSession:
 
     def read_client(self, session_id):
         """
-        Lit les donnees disponibles sur le socket de ce joueur, traite les
-        messages complets. Retourne False si la connexion doit être fermée
+        Lit les données disponibles sur le socket de ce joueur
+        Retourne False si la connexion doit être fermée
+        message anormalement gros = client suspect
         """
         client = self.clients[session_id]
         try:
@@ -88,8 +91,14 @@ class GameSession:
             return False
 
         client["recv_buffer"] += data.decode("utf-8")
+
+        if len(client["recv_buffer"]) > MAX_BUFFER_SIZE:
+            return False
+
         while "\n" in client["recv_buffer"]:
             line, client["recv_buffer"] = client["recv_buffer"].split("\n", 1)
+            if len(line) > MAX_BUFFER_SIZE:
+                return False
             message = decode((line + "\n").encode("utf-8"))
             self._handle_message(session_id, message)
 

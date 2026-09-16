@@ -7,6 +7,7 @@ from network.protocol import (
     MSG_LOBBY_LIST_REQUEST, MSG_CREATE_LOBBY, MSG_JOIN_LOBBY,
 )
 from server.lobby_manager import LobbyManager
+from server.game_session import MAX_BUFFER_SIZE
 
 SERVER_PORT = 5560
 TICK_RATE = 1 / 30  #30updt par s
@@ -80,8 +81,16 @@ class DedicatedServer:
             return
 
         state["recv_buffer"] += data.decode("utf-8")
+
+        if len(state["recv_buffer"]) > MAX_BUFFER_SIZE:
+            self._close_connection(conn)
+            return
+
         while "\n" in state["recv_buffer"]:
             line, state["recv_buffer"] = state["recv_buffer"].split("\n", 1)
+            if len(line) > MAX_BUFFER_SIZE:
+                self._close_connection(conn)
+                return
             message = decode((line + "\n").encode("utf-8"))
             self._handle_pending_message(conn, state, message)
 
@@ -93,13 +102,18 @@ class DedicatedServer:
             conn.send(encode(make_lobby_list_message(summaries)))
 
         elif msg_type == MSG_CREATE_LOBBY:
-            lobby = self.lobby_manager.create_lobby(
+            creator_ip = conn.getpeername()[0]
+            lobby, error = self.lobby_manager.create_lobby(
                 name=message["name"],
                 seed=message["seed"],
                 max_players=message["max_players"],
                 password=message["password"],
                 creator_pseudo=message["pseudo"],
+                creator_key=creator_ip,
             )
+            if lobby is None:
+                conn.send(encode(make_lobby_error_message(error)))
+                return
             self._join_lobby(conn, state, lobby, message["pseudo"])
 
         elif msg_type == MSG_JOIN_LOBBY:

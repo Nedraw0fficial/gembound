@@ -2,12 +2,13 @@ from server.game_session import GameSession
 
 
 class Lobby:
-    def __init__(self, lobby_id, name, seed, max_players, password, creator_pseudo):
+    def __init__(self, lobby_id, name, seed, max_players, password, creator_pseudo, creator_key):
         self.id = lobby_id
         self.name = name
         self.max_players = max_players
         self.password = password
         self.creator_pseudo = creator_pseudo
+        self.creator_key = creator_key
 
         self.session = GameSession(seed=seed, max_players=max_players)
         self.started = False # passe à True dès qu'au moins un joueur est dedans
