@@ -29,8 +29,8 @@ def apply_resolution(width, height):
     DISPLAY_TILE_SIZE = TILE_SIZE * SCALE
 
     PLAYER_LABEL_FONT_SIZE = max(8, round(BASE_LABEL_FONT_SIZE * ratio))
-    HEALTH_BAR_OWN_SCALE = max(1, round(BASE_HEALTH_BAR_OWN_SCALE * ratio))
-    HEALTH_BAR_OTHER_SCALE = max(1, round(BASE_HEALTH_BAR_OTHER_SCALE * ratio))
+    HEALTH_BAR_OWN_SCALE = max(1.0, BASE_HEALTH_BAR_OWN_SCALE * ratio)
+    HEALTH_BAR_OTHER_SCALE = max(1.0, BASE_HEALTH_BAR_OTHER_SCALE * ratio)
 
 #player
 PLAYER_MAX_SPEED = 100

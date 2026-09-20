@@ -43,10 +43,10 @@ class HealthBarRenderer:
 
         scale = config.HEALTH_BAR_OWN_SCALE
         bg_scaled = pygame.transform.scale(
-            self.own_bg, (self.own_bg.get_width() * scale, self.own_bg.get_height() * scale)
+            self.own_bg, (int(round(self.own_bg.get_width() * scale)), int(round(self.own_bg.get_height() * scale)))
         )
         fill_scaled = pygame.transform.scale(
-            fill, (fill.get_width() * scale, fill.get_height() * scale)
+            fill, (int(round(fill.get_width() * scale)), int(round(fill.get_height() * scale)))
         )
 
         bar_x = config.SCREEN_WIDTH // 2 - bg_scaled.get_width() // 2
@@ -70,10 +70,10 @@ class HealthBarRenderer:
 
         scale = config.HEALTH_BAR_OTHER_SCALE
         bg_scaled = pygame.transform.scale(
-            self.other_bg, (self.other_bg.get_width() * scale, self.other_bg.get_height() * scale)
+            self.other_bg, (int(round(self.other_bg.get_width() * scale)), int(round(self.other_bg.get_height() * scale)))
         )
         fill_scaled = pygame.transform.scale(
-            fill, (fill.get_width() * scale, fill.get_height() * scale)
+            fill, (int(round(fill.get_width() * scale)), int(round(fill.get_height() * scale)))
         )
 
         bg_x = screen_x - bg_scaled.get_width() // 2
