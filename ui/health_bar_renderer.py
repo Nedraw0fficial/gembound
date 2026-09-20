@@ -41,7 +41,7 @@ class HealthBarRenderer:
             filled, white, color,
         )
 
-        scale = config.HEALTH_BAR_SCALE
+        scale = config.HEALTH_BAR_OWN_SCALE
         bg_scaled = pygame.transform.scale(
             self.own_bg, (self.own_bg.get_width() * scale, self.own_bg.get_height() * scale)
         )
@@ -68,7 +68,7 @@ class HealthBarRenderer:
             filled, white, color,
         )
 
-        scale = config.HEALTH_BAR_SCALE
+        scale = config.HEALTH_BAR_OTHER_SCALE
         bg_scaled = pygame.transform.scale(
             self.other_bg, (self.other_bg.get_width() * scale, self.other_bg.get_height() * scale)
         )
