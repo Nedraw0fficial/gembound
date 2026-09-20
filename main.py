@@ -397,7 +397,7 @@ def main():
                     pending_labels.append((label, screen_label_x, screen_label_y))
                     if session_id != my_id:
                         health_screen_x = tile_center_x * zoom
-                        health_screen_y = (sprite_y - 26) * zoom
+                        health_screen_y = screen_label_y
                         pending_health_bars.append((session_id, pos["hp"], health_screen_x, health_screen_y))
 
                 dungeon_renderer.render_overlay_layer(capture, room, camera_x, camera_y)
@@ -405,11 +405,11 @@ def main():
                 scaled_capture = pygame.transform.scale(capture, (config.SCREEN_WIDTH, config.SCREEN_HEIGHT))
                 screen.blit(scaled_capture, (0, 0))
 
-                for label, label_x, label_y in pending_labels:
-                    screen.blit(label, (label_x, label_y))
-
                 for session_id, hp, hx, hy in pending_health_bars:
                     health_bar_renderer.render_other(screen, health_displays[session_id], hp, hx, hy)
+
+                for label, label_x, label_y in pending_labels:
+                    screen.blit(label, (label_x, label_y))
 
                 if my_id in network.players:
                     my_display = health_displays.get(my_id)
