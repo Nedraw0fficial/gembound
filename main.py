@@ -13,6 +13,10 @@ from ui.screens import (
     MenuScreen, CreateLobbyScreen, JoinScreen, OptionsScreen,
     SCREEN_MENU, SCREEN_CREATE_LOBBY, SCREEN_JOIN, SCREEN_IN_GAME, SCREEN_OPTIONS,
 )
+from entities.health_display import HealthDisplay
+from ui.health_bar_renderer import HealthBarRenderer
+
+
 
 PLAYER_COLORS = [
     (220, 80, 80),
@@ -136,6 +140,8 @@ def main():
 
     dungeon_renderer = DungeonRenderer()
     gate_renderer = GateRenderer()
+    health_bar_renderer = HealthBarRenderer()
+    health_displays = {}
 
     current_screen = SCREEN_MENU
     menu_screen = MenuScreen(font, title_font)
@@ -342,11 +348,17 @@ def main():
                 gate_renderer.render(capture, network.gates, camera_x, camera_y)
                 
                 pending_labels = []
+                pending_health_bars = []
+
                 sorted_players = sorted(network.players.items(), key=lambda item: item[1]["y"])
                 for session_id, pos in sorted_players:
                     if session_id not in player_animations:
                         player_animations[session_id] = AnimationController()
                     anim = player_animations[session_id]
+
+                    if session_id not in health_displays:
+                        health_displays[session_id] = HealthDisplay(pos["hp"], pos["max_hp"])
+                    health_displays[session_id].update(pos["hp"], pos["max_hp"], dt)
 
                     speed = (pos["vx"] ** 2 + pos["vy"] ** 2) ** 0.5
                     if speed > 5:
@@ -382,6 +394,10 @@ def main():
                     screen_label_x = tile_center_x * zoom - label.get_width() / 2
                     screen_label_y = (sprite_y - 8) * zoom
                     pending_labels.append((label, screen_label_x, screen_label_y))
+                    if session_id != my_id:
+                        health_screen_x = tile_center_x * zoom
+                        health_screen_y = (sprite_y - 26) * zoom
+                        pending_health_bars.append((session_id, pos["hp"], health_screen_x, health_screen_y))
 
                 dungeon_renderer.render_overlay_layer(capture, room, camera_x, camera_y)
 
@@ -390,6 +406,14 @@ def main():
 
                 for label, label_x, label_y in pending_labels:
                     screen.blit(label, (label_x, label_y))
+
+                for session_id, hp, hx, hy in pending_health_bars:
+                    health_bar_renderer.render_other(screen, health_displays[session_id], hp, hx, hy)
+
+                if my_id in network.players:
+                    my_display = health_displays.get(my_id)
+                    if my_display is not None:
+                        health_bar_renderer.render_own(screen, my_display, network.players[my_id]["hp"])
                 
                 visible_messages = network.messages[-MAX_VISIBLE_MESSAGES:]
                 base_y = config.SCREEN_HEIGHT - 30 - len(visible_messages) * 22
