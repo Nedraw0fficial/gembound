@@ -418,18 +418,26 @@ def main():
                     if my_display is not None:
                         health_bar_renderer.render_own(screen, my_display, network.players[my_id]["hp"])
                 
+                s = config.UI_LAYOUT_SCALE
+                margin_x = int(10 * s)
+                bottom_margin = int(30 * s)
+                line_height = int(22 * s)
+                input_box_w = int(400 * s)
+                input_box_h = int(26 * s)
+                input_padding = int(4 * s)
+
                 visible_messages = network.messages[-MAX_VISIBLE_MESSAGES:]
-                base_y = config.SCREEN_HEIGHT - 30 - len(visible_messages) * 22
+                base_y = config.SCREEN_HEIGHT - bottom_margin - len(visible_messages) * line_height
                 for i, msg in enumerate(visible_messages):
                     text_str, color = format_message(msg)
                     rendered = font.render(text_str, True, color)
-                    screen.blit(rendered, (10, base_y + i * 22))
+                    screen.blit(rendered, (margin_x, base_y + i * line_height))
 
                 if chat_active:
-                    input_rect_y = config.SCREEN_HEIGHT - 30
-                    pygame.draw.rect(screen, (0, 0, 0), (10, input_rect_y - 4, 400, 26))
+                    input_rect_y = config.SCREEN_HEIGHT - bottom_margin
+                    pygame.draw.rect(screen, (0, 0, 0), (margin_x, input_rect_y - input_padding, input_box_w, input_box_h))
                     input_text = font.render("> " + chat_text, True, (255, 255, 255))
-                    screen.blit(input_text, (14, input_rect_y))
+                    screen.blit(input_text, (margin_x + input_padding, input_rect_y))
 
         pygame.display.flip()
 
