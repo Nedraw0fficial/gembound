@@ -18,12 +18,18 @@ class MenuScreen:
     def __init__(self, font, title_font):
         self.font = font
         self.title_font = title_font
+        s = config.UI_LAYOUT_SCALE
         center_x = config.SCREEN_WIDTH // 2
 
-        self.pseudo_input = TextInput(center_x - 120, 220, 240, 36, font, placeholder="Pseudo (optionnel)")
-        self.create_button = Button(center_x - 120, 280, 240, 44, "Create Lobby", font)
-        self.join_button = Button(center_x - 120, 336, 240, 44, "Join Lobby", font)
-        self.options_button = Button(center_x - 120, 392, 240, 44, "Options", font)
+        btn_w = int(240 * s)
+        btn_h = int(44 * s)
+        gap = int(56 * s)
+        top_y = int(220 * s)
+
+        self.pseudo_input = TextInput(center_x - btn_w // 2, top_y, btn_w, int(36 * s), font, placeholder="Pseudo (optionnel)")
+        self.create_button = Button(center_x - btn_w // 2, top_y + gap, btn_w, btn_h, "Create Lobby", font)
+        self.join_button = Button(center_x - btn_w // 2, top_y + gap * 2, btn_w, btn_h, "Join Lobby", font)
+        self.options_button = Button(center_x - btn_w // 2, top_y + gap * 3, btn_w, btn_h, "Options", font)
 
     def handle_event(self, event):
         self.pseudo_input.handle_event(event)
@@ -42,7 +48,7 @@ class MenuScreen:
 
     def draw(self, screen):
         title = self.title_font.render(config.GAME_TITLE, True, (255, 255, 255))
-        screen.blit(title, (config.SCREEN_WIDTH // 2 - title.get_width() // 2, 100))
+        screen.blit(title, (config.SCREEN_WIDTH // 2 - title.get_width() // 2, int(100 * config.UI_LAYOUT_SCALE)))
 
         self.pseudo_input.draw(screen)
         self.create_button.draw(screen)
@@ -53,20 +59,34 @@ class MenuScreen:
 class CreateLobbyScreen:
     def __init__(self, font):
         self.font = font
+        s = config.UI_LAYOUT_SCALE
         center_x = config.SCREEN_WIDTH // 2
 
-        self.name_input = TextInput(center_x - 120, 160, 240, 36, font, placeholder="Nom du lobby")
-        self.seed_input = TextInput(center_x - 120, 208, 240, 36, font, placeholder="Seed (optionnel)")
-        self.password_input = TextInput(center_x - 120, 256, 240, 36, font, placeholder="Mot de passe (optionnel)")
+        btn_w = int(240 * s)
+        btn_h = int(44 * s)
+        input_h = int(36 * s)
+        small_btn_w = int(44 * s)
+        small_btn_h = int(40 * s)
+        gap = int(48 * s)
+        top_y = int(160 * s)
+
+        self.name_input = TextInput(center_x - btn_w // 2, top_y, btn_w, input_h, font, placeholder="Nom du lobby")
+        self.seed_input = TextInput(center_x - btn_w // 2, top_y + gap, btn_w, input_h, font, placeholder="Seed (optionnel)")
+        self.password_input = TextInput(center_x - btn_w // 2, top_y + gap * 2, btn_w, input_h, font, placeholder="Mot de passe (optionnel)")
 
         self.max_players = 4
-        self.minus_button = Button(center_x - 120, 304, 44, 40, "-", font)
-        self.plus_button = Button(center_x + 76, 304, 44, 40, "+", font)
+        players_y = top_y + gap * 3
+        self.minus_button = Button(center_x - btn_w // 2, players_y, small_btn_w, small_btn_h, "-", font)
+        self.plus_button = Button(center_x + btn_w // 2 - small_btn_w, players_y, small_btn_w, small_btn_h, "+", font)
 
         self.is_lan = False
-        self.lan_toggle_button = Button(center_x - 120, 360, 240, 44, self._lan_label(), font)
+        toggle_y = players_y + int(56 * s)
+        self.lan_toggle_button = Button(center_x - btn_w // 2, toggle_y, btn_w, btn_h, self._lan_label(), font)
 
-        self.create_button = Button(center_x - 120, 420, 240, 44, "Créer", font)
+        create_y = toggle_y + int(60 * s)
+        self.create_button = Button(center_x - btn_w // 2, create_y, btn_w, btn_h, "Créer", font)
+
+        self._players_label_y = players_y + int(6 * s)
 
     def _lan_label(self):
         return f"Mode : {'LAN' if self.is_lan else 'Serveur en ligne'}"
@@ -112,7 +132,7 @@ class CreateLobbyScreen:
         self.minus_button.draw(screen)
         self.plus_button.draw(screen)
         count_text = self.font.render(f"Joueurs max : {self.max_players}", True, (255, 255, 255))
-        screen.blit(count_text, (config.SCREEN_WIDTH // 2 - count_text.get_width() // 2, 310))
+        screen.blit(count_text, (config.SCREEN_WIDTH // 2 - count_text.get_width() // 2, self._players_label_y))
 
         self.lan_toggle_button.draw(screen)
         self.create_button.draw(screen)
@@ -144,11 +164,18 @@ class JoinScreen:
         self.visible_entries = {}
 
         self.mode = JOIN_MODE_LIST
-        self.password_target = None  # lobby_id en attente de mot de passe
+        self.password_target = None
+
+        s = config.UI_LAYOUT_SCALE
         center_x = config.SCREEN_WIDTH // 2
-        self.password_input = TextInput(center_x - 120, 300, 240, 36, font, placeholder="Mot de passe")
-        self.password_confirm_button = Button(center_x - 120, 344, 240, 44, "Rejoindre", font)
-        self.password_cancel_button = Button(center_x - 120, 396, 240, 40, "Annuler", font)
+        btn_w = int(240 * s)
+        input_h = int(36 * s)
+        btn_h = int(44 * s)
+        small_btn_h = int(40 * s)
+
+        self.password_input = TextInput(center_x - btn_w // 2, int(300 * s), btn_w, input_h, font, placeholder="Mot de passe")
+        self.password_confirm_button = Button(center_x - btn_w // 2, int(344 * s), btn_w, btn_h, "Rejoindre", font)
+        self.password_cancel_button = Button(center_x - btn_w // 2, int(396 * s), btn_w, small_btn_h, "Annuler", font)
 
     def _label_for_lan(self, game):
         full = game["current_players"] >= game["max_players"]
@@ -162,9 +189,9 @@ class JoinScreen:
         full = lobby["current_players"] >= lobby["max_players"]
         label = f"{lobby['creator_pseudo']} — {lobby['name']} ({lobby['current_players']}/{lobby['max_players']})"
         if lobby["has_password"]:
-            label += " [pw]"
+            label += " 🔒"
         if full:
-            label += " FULL!"
+            label += " [complet]"
         return label
 
     def _sync_entries(self):
@@ -185,8 +212,14 @@ class JoinScreen:
             for lobby in self.directory_client.lobby_list:
                 entries[("online", lobby["id"])] = ("online", lobby, self._label_for_online(lobby))
 
+        s = config.UI_LAYOUT_SCALE
         center_x = config.SCREEN_WIDTH // 2
-        y = 160
+        entry_w = int(400 * s)
+        entry_h = int(40 * s)
+        entry_gap = int(48 * s)
+        top_y = int(160 * s)
+
+        y = top_y
         for key in list(self.game_buttons.keys()):
             if key not in entries:
                 del self.game_buttons[key]
@@ -194,10 +227,12 @@ class JoinScreen:
         for key, (kind, data, label) in sorted(entries.items(), key=lambda kv: kv[1][2]):
             if key in self.game_buttons:
                 self.game_buttons[key].text = label
-                self.game_buttons[key].rect.topleft = (center_x - 200, y)
+                self.game_buttons[key].rect.topleft = (center_x - entry_w // 2, y)
+                self.game_buttons[key].rect.width = entry_w
+                self.game_buttons[key].rect.height = entry_h
             else:
-                self.game_buttons[key] = Button(center_x - 200, y, 400, 40, label, self.font)
-            y += 48
+                self.game_buttons[key] = Button(center_x - entry_w // 2, y, entry_w, entry_h, label, self.font)
+            y += entry_gap
 
         self.visible_entries = entries
 
@@ -248,7 +283,7 @@ class JoinScreen:
     def draw(self, screen):
         if self.mode == JOIN_MODE_PASSWORD:
             prompt = self.font.render("Mot de passe requis :", True, (255, 255, 255))
-            screen.blit(prompt, (config.SCREEN_WIDTH // 2 - prompt.get_width() // 2, 260))
+            screen.blit(prompt, (config.SCREEN_WIDTH // 2 - prompt.get_width() // 2, int(260 * config.UI_LAYOUT_SCALE)))
             self.password_input.draw(screen)
             self.password_confirm_button.draw(screen)
             self.password_cancel_button.draw(screen)
@@ -256,7 +291,7 @@ class JoinScreen:
 
         if not self.visible_entries:
             text = self.font.render("Recherche de parties...", True, (200, 200, 200))
-            screen.blit(text, (config.SCREEN_WIDTH // 2 - text.get_width() // 2, 160))
+            screen.blit(text, (config.SCREEN_WIDTH // 2 - text.get_width() // 2, int(160 * config.UI_LAYOUT_SCALE)))
             return
 
         for key, button in self.game_buttons.items():
@@ -270,8 +305,6 @@ class JoinScreen:
 
     def close(self):
         self.listener.close()
-        if self.directory_client is not None:
-            self.directory_client.close()
 
     def close_lan_listener(self):
         self.listener.close()
@@ -280,23 +313,32 @@ class OptionsScreen:
     def __init__(self, font, settings):
         self.font = font
         self.settings = settings
+        s = config.UI_LAYOUT_SCALE
         center_x = config.SCREEN_WIDTH // 2
 
-        self.resolution_index = self._find_resolution_index()
-        self.res_minus_button = Button(center_x - 160, 200, 44, 40, "-", font)
-        self.res_plus_button = Button(center_x + 116, 200, 44, 40, "+", font)
+        btn_w = int(240 * s)
+        btn_h = int(44 * s)
+        small_btn_w = int(44 * s)
+        small_btn_h = int(40 * s)
+        remap_h = int(40 * s)
+        gap = int(48 * s)
 
-        self.fullscreen_button = Button(center_x - 120, 260, 240, 44,
-                                          self._fullscreen_label(), font)
+        self.resolution_index = self._find_resolution_index()
+        res_y = int(200 * s)
+        self.res_minus_button = Button(center_x - int(160 * s), res_y, small_btn_w, small_btn_h, "-", font)
+        self.res_plus_button = Button(center_x + int(116 * s), res_y, small_btn_w, small_btn_h, "+", font)
+        self._res_label_y = res_y + int(10 * s)
+
+        fullscreen_y = int(260 * s)
+        self.fullscreen_button = Button(center_x - btn_w // 2, fullscreen_y, btn_w, btn_h, self._fullscreen_label(), font)
 
         self.remap_buttons = {}
-        y = 340
+        y = int(340 * s)
         for action in ("up", "down", "left", "right"):
-            self.remap_buttons[action] = Button(center_x - 120, y, 240, 40,
-                                                  self._keybind_label(action), font)
-            y += 48
+            self.remap_buttons[action] = Button(center_x - btn_w // 2, y, btn_w, remap_h, self._keybind_label(action), font)
+            y += gap
 
-        self.back_button = Button(center_x - 120, y + 20, 240, 44, "Retour", font)
+        self.back_button = Button(center_x - btn_w // 2, y + int(20 * s), btn_w, btn_h, "Retour", font)
 
         self.listening_for = None
 
@@ -311,7 +353,6 @@ class OptionsScreen:
         return f"Plein écran : {'Oui' if self.settings.fullscreen else 'Non'}"
 
     def _keybind_label(self, action):
-        from settings import DEFAULT_KEYBINDS
         key_names = [pygame.key.name(k).upper() for k in self.settings.keybinds.get(action, [])]
         label = " / ".join(key_names) if key_names else "..."
         action_label = {"up": "Haut", "down": "Bas", "left": "Gauche", "right": "Droite"}[action]
@@ -361,14 +402,12 @@ class OptionsScreen:
             button.update_hover(mouse_pos)
 
     def draw(self, screen):
-        from settings import DEFAULT_RESOLUTIONS
-
         self.res_minus_button.draw(screen)
         self.res_plus_button.draw(screen)
 
         res_text = f"{self.settings.resolution[0]} x {self.settings.resolution[1]}"
         res_label = self.font.render(res_text, True, (255, 255, 255))
-        screen.blit(res_label, (config.SCREEN_WIDTH // 2 - res_label.get_width() // 2, 210))
+        screen.blit(res_label, (config.SCREEN_WIDTH // 2 - res_label.get_width() // 2, self._res_label_y))
 
         self.fullscreen_button.draw(screen)
 
