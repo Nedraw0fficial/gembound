@@ -236,6 +236,7 @@ def main():
                 result = options_screen.handle_event(event)
                 if result == "resolution_changed":
                     screen = _apply_display_mode(settings)
+                    label_font = pygame.font.Font(config.FONT_PATH, config.PLAYER_LABEL_FONT_SIZE)
                     options_screen = OptionsScreen(font, settings)
                 elif result == "back":
                     save_settings(settings)
