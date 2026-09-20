@@ -32,7 +32,6 @@ class HealthBarRenderer:
         return surface
 
     def render_own(self, screen, health_display, real_hp, color=None):
-        """Bar HUD, position fixe en bas au centre"""
         color = color or config.HEALTH_COLOR_NORMAL
         filled, white = health_display.get_segments(real_hp)
 
@@ -42,14 +41,24 @@ class HealthBarRenderer:
             filled, white, color,
         )
 
-        bar_x = config.SCREEN_WIDTH // 2 - self.own_bg.get_width() // 2
-        bar_y = config.SCREEN_HEIGHT - self.own_bg.get_height() - 16
+        scale = config.HEALTH_BAR_SCALE
+        bg_scaled = pygame.transform.scale(
+            self.own_bg, (self.own_bg.get_width() * scale, self.own_bg.get_height() * scale)
+        )
+        fill_scaled = pygame.transform.scale(
+            fill, (fill.get_width() * scale, fill.get_height() * scale)
+        )
 
-        screen.blit(self.own_bg, (bar_x, bar_y))
-        screen.blit(fill, (bar_x + config.HEALTH_BAR_OWN_PADDING_X, bar_y + config.HEALTH_BAR_OWN_PADDING_Y))
+        bar_x = config.SCREEN_WIDTH // 2 - bg_scaled.get_width() // 2
+        bar_y = config.SCREEN_HEIGHT - bg_scaled.get_height() - 16
+
+        screen.blit(bg_scaled, (bar_x, bar_y))
+        screen.blit(fill_scaled, (
+            bar_x + config.HEALTH_BAR_OWN_PADDING_X * scale,
+            bar_y + config.HEALTH_BAR_OWN_PADDING_Y * scale,
+        ))
 
     def render_other(self, screen, health_display, real_hp, screen_x, screen_y, color=None):
-        """Autres joueurs"""
         color = color or config.HEALTH_COLOR_NORMAL
         filled, white = health_display.get_segments(real_hp)
 
@@ -59,7 +68,14 @@ class HealthBarRenderer:
             filled, white, color,
         )
 
-        bg_x = screen_x - self.other_bg.get_width() // 2
-        screen.blit(self.other_bg, (bg_x, screen_y))
-        screen.blit(fill, (bg_x, screen_y))
-        
+        scale = config.HEALTH_BAR_SCALE
+        bg_scaled = pygame.transform.scale(
+            self.other_bg, (self.other_bg.get_width() * scale, self.other_bg.get_height() * scale)
+        )
+        fill_scaled = pygame.transform.scale(
+            fill, (fill.get_width() * scale, fill.get_height() * scale)
+        )
+
+        bg_x = screen_x - bg_scaled.get_width() // 2
+        screen.blit(bg_scaled, (bg_x, screen_y))
+        screen.blit(fill_scaled, (bg_x, screen_y))
