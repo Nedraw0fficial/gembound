@@ -27,7 +27,7 @@ def slice_image(source_surface, corner_size=CORNER_SIZE):
 
 def render_nine_slice(pieces, target_width, target_height, corner_size=CORNER_SIZE, scale=1):
     
-    display_corner = corner_size * scale
+    display_corner = int(round(corner_size * scale))
     result = pygame.Surface((target_width, target_height), pygame.SRCALPHA)
 
     inner_w = target_width - 2 * display_corner
