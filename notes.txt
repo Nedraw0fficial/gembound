@@ -26,3 +26,10 @@ Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 python main.py
+
+
+
+# si warning :
+sudo systemctl daemon-reload
+sudo systemctl restart gembound
+sudo systemctl status gembound

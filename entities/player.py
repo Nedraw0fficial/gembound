@@ -8,7 +8,10 @@ HITBOX_OFFSET_Y = (config.TILE_SIZE - HITBOX_HEIGHT) / 2 - 4
 
 
 def new_player_state(x, y):
-    return {"x": float(x), "y": float(y), "vx": 0.0, "vy": 0.0}
+    return {
+        "x": float(x), "y": float(y), "vx": 0.0, "vy": 0.0,
+        "hp": float(config.PLAYER_MAX_HP), "max_hp": float(config.PLAYER_MAX_HP),
+    }
 
 
 def _get_direction(keys):
